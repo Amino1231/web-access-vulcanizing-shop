@@ -1,13 +1,17 @@
 <?php
 
+use App\Enums\PostStatus;
 use App\Models\Inventory;
+use App\Models\Post;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Variant;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -24,30 +28,42 @@ new #[Layout('layouts.shop_owner')] class extends Component
     public float $cost_price = 0;
     public float $selling_price = 0;
     public int $low_stock_alert = 5;
+
     public $mainImage;
     public array $attachmentImages = [];
+
     public bool $hasVariants = false;
     public array $variantGroups = [
         ['title' => 'Color', 'options' => ['Red', 'Blue', 'Black']],
     ];
-    public array $categories = [];
+
+    public string $status = 'published';
+
     public string $newCategoryName = '';
     public string $newCategoryDescription = '';
 
     public function mount(): void
     {
+      
+    }
+
+    #[Computed]
+    public function categories(): array
+    {
         $tenant = Auth::user()?->tenant;
 
-        $this->categories = ProductCategory::query()
-            ->when($tenant, fn ($query) => $query->where('tenant_id', $tenant->id), fn ($query) => $query->whereRaw('0 = 1'))
+        if (! $tenant) {
+            return [];
+        }
+
+        return ProductCategory::query()
+            ->where('tenant_id', $tenant->id)
             ->orderBy('name')
-            ->get()
-            ->map(fn ($category) => [
-                'id' => $category->id,
-                'name' => $category->name,
-            ])
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])
             ->toArray();
     }
+
 
     public function addVariantGroup(): void
     {
@@ -109,7 +125,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->where('slug', $slug)
             ->exists()) {
             $this->addError('newCategoryName', 'This category already exists.');
-
             return;
         }
 
@@ -123,17 +138,16 @@ new #[Layout('layouts.shop_owner')] class extends Component
         } catch (QueryException $exception) {
             if ($exception->getCode() === '23000') {
                 $this->addError('newCategoryName', 'This category already exists.');
-
                 return;
             }
-
             throw $exception;
         }
 
         $this->category_id = (string) $category->id;
         $this->newCategoryName = '';
         $this->newCategoryDescription = '';
-        $this->mount();
+
+        unset($this->categories);
     }
 
     public function save(): void
@@ -160,79 +174,97 @@ new #[Layout('layouts.shop_owner')] class extends Component
             'mainImage' => ['required', 'image', 'max:2048'],
             'attachmentImages' => ['nullable', 'array', 'max:5'],
             'attachmentImages.*' => ['image', 'max:2048'],
+            'status' => ['required', Rule::in(array_column(PostStatus::cases(), 'value'))],
             'variantGroups' => ['nullable', 'array'],
             'variantGroups.*.title' => ['nullable', 'string', 'max:100'],
             'variantGroups.*.options' => ['nullable', 'array'],
             'variantGroups.*.options.*' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $mainImagePath = $this->mainImage?->store("tenant/{$tenant->id}/products/main", 'public');
-        $attachmentPaths = [];
+        DB::transaction(function () use ($tenant) {
+            $mainImagePath = $this->mainImage?->store("tenant/{$tenant->id}/products/main", 'public');
+            $attachmentPaths = [];
 
-        foreach ($this->attachmentImages as $attachment) {
-            $attachmentPaths[] = $attachment->store("tenant/{$tenant->id}/products/attachments", 'public');
-        }
-
-        $slug = Str::slug($this->name) ?: 'product';
-        $sku = strtoupper(Str::slug($this->name, '-')) . '-' . Str::upper(Str::random(4));
-        $productStock = $this->hasVariants ? 0 : (int) $this->stock;
-
-        $product = Product::create([
-            'tenant_id' => $tenant->id,
-            'category_id' => $this->category_id,
-            'brand_id' => null,
-            'name' => $this->name,
-            'slug' => $slug,
-            'sku' => $sku,
-            'barcode' => $this->barcode ?: null,
-            'cost_price' => $this->cost_price,
-            'selling_price' => $this->selling_price,
-            'stock' => $productStock,
-            'low_stock_alert' => $this->low_stock_alert,
-            'description' => $this->description,
-            'ft_img' => $mainImagePath,
-            'attachments' => $attachmentPaths,
-        ]);
-
-        if (! $this->hasVariants) {
-            Inventory::create([
-                'tenant_id' => $tenant->id,
-                'product_id' => $product->id,
-                'type' => 'stock_in',
-                'quantity' => $productStock,
-                'before_stock' => 0,
-                'after_stock' => $productStock,
-                'reference_type' => 'product_post',
-                'reference_id' => $product->id,
-                'remarks' => 'Initial stock added on product creation.',
-            ]);
-        }
-
-        if ($this->hasVariants) {
-            $variantCombos = $this->buildVariantCombinations($this->variantGroups);
-            $variantTotal = 0;
-
-            foreach ($variantCombos as $combo) {
-                $label = $this->variantLabel($combo);
-                $variantStock = 0;
-                $variantPrice = $this->selling_price;
-                $variantImage = null;
-
-                $variant = Variant::create([
-                    'tenant_id' => $tenant->id,
-                    'product_id' => $product->id,
-                    'sku' => $label,
-                    'price' => $variantPrice,
-                    'stock_quantity' => $variantStock,
-                    'image' => $variantImage,
-                ]);
-
-                $variantTotal += $variant->stock_quantity;
+            foreach ($this->attachmentImages as $attachment) {
+                $attachmentPaths[] = $attachment->store("tenant/{$tenant->id}/products/attachments", 'public');
             }
 
-            $product->stock = $variantTotal;
-            $product->save();
-        }
+            $slug = $this->uniqueSlug($this->name);
+            $sku = $this->uniqueSku($this->name);
+            $productStock = $this->hasVariants ? 0 : (int) $this->stock;
+
+            $product = Product::create([
+                'tenant_id' => $tenant->id,
+                'category_id' => $this->category_id,
+                'brand_id' => null,
+                'name' => $this->name,
+                'slug' => $slug,
+                'sku' => $sku,
+                'barcode' => $this->barcode ?: null,
+                'cost_price' => $this->cost_price,
+                'selling_price' => $this->selling_price,
+                'stock' => $productStock,
+                'low_stock_alert' => $this->low_stock_alert,
+                'description' => $this->description,
+                'ft_img' => $mainImagePath,
+                'attachments' => $attachmentPaths,
+            ]);
+
+            if (! $this->hasVariants) {
+                Inventory::create([
+                    'tenant_id' => $tenant->id,
+                    'product_id' => $product->id,
+                    'type' => 'stock_in',
+                    'quantity' => $productStock,
+                    'before_stock' => 0,
+                    'after_stock' => $productStock,
+                    'reference_type' => 'product_post',
+                    'reference_id' => $product->id,
+                    'remarks' => 'Initial stock added on product creation.',
+                ]);
+            }
+
+            if ($this->hasVariants) {
+                $variantCombos = $this->buildVariantCombinations($this->variantGroups);
+                $variantTotal = 0;
+
+                foreach ($variantCombos as $combo) {
+                    $label = $this->variantLabel($combo);
+
+                    if ($label === '') {
+                        continue;
+                    }
+
+                    $variantSku = $sku . '-' . strtoupper(Str::slug($label, '-'));
+
+                    $variant = Variant::create([
+                        'tenant_id' => $tenant->id,
+                        'product_id' => $product->id,
+                        'sku' => $variantSku,
+                        'price' => $this->selling_price,
+                        'stock_quantity' => 0,
+                    ]);
+
+                    $variantTotal += $variant->stock_quantity;
+                }
+
+                $product->stock = $variantTotal;
+                $product->save();
+            }
+
+            Post::create([
+                'tenant_id' => $tenant->id,
+                'product_id' => $product->id,
+                'product_category_id' => $product->category_id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'type' => 'product',
+                'image' => $mainImagePath,
+                'price' => $product->selling_price,
+                'description' => $product->description,
+                'status' => $this->status,
+            ]);
+        });
 
         $this->reset([
             'name',
@@ -252,9 +284,34 @@ new #[Layout('layouts.shop_owner')] class extends Component
         ]);
 
         $this->variantGroups = [['title' => 'Color', 'options' => ['Red', 'Blue', 'Black']]];
+        $this->status = PostStatus::Published->value;
 
         session()->flash('success', 'Product post created successfully.');
         $this->redirectRoute('owner.products');
+    }
+
+    protected function uniqueSlug(string $name): string
+    {
+        $base = Str::slug($name) ?: 'product';
+        $slug = $base;
+        $i = 1;
+
+        while (Product::where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $i++;
+        }
+
+        return $slug;
+    }
+
+    protected function uniqueSku(string $name): string
+    {
+        $base = strtoupper(Str::slug($name, '-')) ?: 'PRODUCT';
+
+        do {
+            $sku = $base . '-' . Str::upper(Str::random(4));
+        } while (Product::where('sku', $sku)->exists());
+
+        return $sku;
     }
 
     protected function buildVariantCombinations(array $groups): array
@@ -263,7 +320,10 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         foreach ($groups as $group) {
             $groupTitle = trim((string) ($group['title'] ?? ''));
-            $options = array_values(array_filter(array_map(fn ($option) => trim((string) $option), $group['options'] ?? []), fn ($option) => $option !== ''));
+            $options = array_values(array_filter(
+                array_map(fn ($option) => trim((string) $option), $group['options'] ?? []),
+                fn ($option) => $option !== ''
+            ));
 
             if ($groupTitle === '' || $options === []) {
                 continue;
@@ -277,6 +337,11 @@ new #[Layout('layouts.shop_owner')] class extends Component
             }
 
             $results = $newResults;
+        }
+
+        // Drop the initial empty-combo seed when no groups were valid
+        if (count($results) === 1 && $results[0] === []) {
+            return [];
         }
 
         return $results;
@@ -293,3 +358,4 @@ new #[Layout('layouts.shop_owner')] class extends Component
         return implode(' | ', $parts);
     }
 };
+?>

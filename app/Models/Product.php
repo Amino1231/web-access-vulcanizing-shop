@@ -2,37 +2,25 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
-        'tenant_id',
-        'category_id',
-        'brand_id',
-        'name',
-        'slug',
-        'sku',
-        'barcode',
-        'cost_price',
-        'selling_price',
-        'stock',
-        'low_stock_alert',
-        'description',
-        'ft_img',
-        'attachments',
+        'tenant_id', 'category_id', 'brand_id', 'name', 'slug', 'sku', 'barcode',
+        'cost_price', 'selling_price', 'stock', 'low_stock_alert',
+        'description', 'ft_img', 'attachments',
     ];
 
     protected $casts = [
         'attachments' => 'array',
     ];
-
-    public function tenant(): BelongsTo
-    {
-        return $this->belongsTo(Tenant::class);
-    }
 
     public function category(): BelongsTo
     {
@@ -47,5 +35,10 @@ class Product extends Model
     public function inventories(): HasMany
     {
         return $this->hasMany(Inventory::class);
+    }
+
+    public function post(): HasOne
+    {
+        return $this->hasOne(Post::class);
     }
 }

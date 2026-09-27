@@ -1,11 +1,12 @@
 @php
+    $tenant = auth()->user()?->tenant;
+
     $navGroups = [
         [
             'label' => 'Overview',
             'items' => [
                 ['label' => 'Dashboard', 'route' => 'owner.dashboard', 'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 11.5L12 4l9 7.5V20a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1v-8.5z" /></svg>'],
-                ['label' => 'Profile', 'route' => 'owner.profile', 'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 19v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M12 11a4 4 0 100-8 4 4 0 000 8z" /></svg>'],
-                ['label' => 'Update profile', 'route' => 'owner.update_profile', 'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5h9M11 12h9M11 19h9M3 4h.01M3 11h.01M3 18h.01" /></svg>'],
+               
             ],
         ],
         [
@@ -26,21 +27,30 @@
     ];
 @endphp
 
-<aside id="ownerSidebar" class="sticky inset-y-0 left-0 z-40 w-72 -translate-x-full border-r border-slate-200 bg-white shadow-xl transition-transform duration-200 lg:static lg:w-72 lg:translate-x-0 lg:shadow-none">
+<aside id="ownerSidebar" class="sticky inset-y-0 left-0 z-40 w-64 -translate-x-full border-r border-slate-200 bg-white transition-transform duration-200 dark:border-gray-800 dark:bg-gray-900 lg:static lg:translate-x-0">
     <div class="flex h-full flex-col">
-        <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-            <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white">VS</div>
-                <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Shop owner</p>
-                    <h2 class="text-sm font-semibold text-slate-900">Control center</h2>
+
+        {{-- Dynamic tenant branding --}}
+        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-4 dark:border-gray-800">
+            <div class="flex min-w-0 items-center gap-3">
+                @if ($tenant?->logo)
+                    <img src="{{ asset('storage/' . $tenant->logo) }}" alt="{{ $tenant->name }}"
+                         class="h-10 w-10 shrink-0 rounded-lg object-cover border border-slate-200 dark:border-gray-700" />
+                @else
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-900 dark:bg-gray-700 text-sm font-bold text-white">
+                        {{ strtoupper(substr($tenant->name ?? 'SH', 0, 2)) }}
+                    </div>
+                @endif
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ $tenant->name ?? 'My shop' }}</p>
+                    <p class="text-[11px] text-slate-500 dark:text-gray-400">Owner portal</p>
                 </div>
             </div>
 
             <button
                 id="ownerSidebarClose"
                 type="button"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 lg:hidden"
                 aria-label="Close sidebar"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -49,20 +59,24 @@
             </button>
         </div>
 
-        <nav class="flex-1 space-y-6 overflow-y-auto px-4 py-5">
+        <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-4">
             @foreach ($navGroups as $group)
                 <div>
-                    <p class="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{{ $group['label'] }}</p>
+                    <p class="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-gray-500">{{ $group['label'] }}</p>
 
-                    <div class="space-y-1.5">
+                    <div class="space-y-1">
                         @foreach ($group['items'] as $item)
-                            @php
-                                $href = route($item['route']);
-                                $isActive = request()->routeIs($item['route']);
-                            @endphp
+                            @php $isActive = request()->routeIs($item['route']); @endphp
 
-                            <a href="{{ $href }}" class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition {{ $isActive ? 'border border-slate-200 bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                                <span class="flex h-8 w-8 items-center justify-center rounded-lg {{ $isActive ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-900' }}">
+                            <a href="{{ route($item['route']) }}"
+                               class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
+                                   {{ $isActive
+                                       ? 'bg-slate-100 text-slate-900 dark:bg-gray-800 dark:text-white'
+                                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white' }}">
+                                <span class="flex h-7 w-7 items-center justify-center rounded-md
+                                    {{ $isActive
+                                        ? 'bg-[#FF5E14] text-white'
+                                        : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 dark:bg-gray-800 dark:text-gray-400 dark:group-hover:bg-gray-700' }}">
                                     {!! $item['icon'] !!}
                                 </span>
                                 {{ $item['label'] }}
@@ -73,17 +87,50 @@
             @endforeach
         </nav>
 
-        <div class="border-t border-slate-200 p-4">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        {{-- Dynamic store status --}}
+        <div class="border-t border-slate-200 p-4 dark:border-gray-800">
+            @php
+                $isLive = (bool) ($tenant->is_active ?? false);
+            @endphp
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-gray-800 dark:bg-gray-800/50">
+                <div class="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-gray-400">
                     <span>Store status</span>
-                    <span class="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">Live</span>
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold {{ $isLive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-gray-700 dark:text-gray-300' }}">
+                        {{ $isLive ? 'Live' : 'Offline' }}
+                    </span>
                 </div>
-                <p class="text-sm font-semibold text-slate-900">Business is active</p>
-                <p class="mt-1 text-xs text-slate-500">Inventory updates are synced in real time.</p>
+                <p class="text-sm font-semibold text-slate-900 dark:text-white">
+                    {{ $isLive ? 'Business is active' : 'Business is inactive' }}
+                </p>
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-gray-400">
+                    {{ $tenant?->address ?? 'No address on file' }}
+                </p>
             </div>
         </div>
     </div>
 </aside>
 
 <div id="ownerSidebarOverlay" class="fixed inset-0 z-30 hidden bg-slate-950/40 lg:hidden"></div>
+
+<script>
+    (function () {
+        const sidebar = document.getElementById('ownerSidebar');
+        const overlay = document.getElementById('ownerSidebarOverlay');
+        const openBtn = document.getElementById('ownerSidebarToggle');
+        const closeBtn = document.getElementById('ownerSidebarClose');
+
+        function openSidebar() {
+            sidebar?.classList.remove('-translate-x-full');
+            overlay?.classList.remove('hidden');
+        }
+
+        function closeSidebar() {
+            sidebar?.classList.add('-translate-x-full');
+            overlay?.classList.add('hidden');
+        }
+
+        openBtn?.addEventListener('click', openSidebar);
+        closeBtn?.addEventListener('click', closeSidebar);
+        overlay?.addEventListener('click', closeSidebar);
+    })();
+</script>

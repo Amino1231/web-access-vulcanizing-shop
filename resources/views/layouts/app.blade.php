@@ -11,8 +11,14 @@
         @livewireStyles
     </head>
     <body>
-        {{ $slot }}
 
+
+        @include('layouts.public.header')
+        <main>
+        {{ $slot }}
+        </main>
+
+        @include('layouts.public.footer')
         @livewireScripts
     </body>
 </html>

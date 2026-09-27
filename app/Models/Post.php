@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\PostStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Post extends Model
 {
@@ -22,4 +24,25 @@ class Post extends Model
         'status',
         'archived_at',
     ];
+
+    protected $casts = [
+        'status'     => PostStatus::class,
+        'archived_at' => 'datetime',
+    ];
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', PostStatus::Published->value)
+                     ->whereNull('archived_at');
+    }
 }

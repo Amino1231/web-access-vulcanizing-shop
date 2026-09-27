@@ -11,9 +11,12 @@ class AuthController extends Controller
     public function logout(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $loginRoute = $user?->hasRole('admin')
-            ? 'admin.login'
-            : ($user?->hasRole('owner') ? 'owner.login' : 'login');
+
+        $homeRoute = match (true) {
+            $user?->hasRole('admin') => 'admin.login',
+            $user?->hasRole('owner') => 'owner.login',
+            default => 'index.page',
+        };
 
         $user?->forceFill(['last_logout_at' => now()])->save();
 
@@ -22,6 +25,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route($loginRoute);
+        return redirect()->route($homeRoute);
     }
 }

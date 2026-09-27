@@ -10,15 +10,22 @@
 
         @livewireStyles
     </head>
-    <body class="bg-slate-100 text-slate-800 antialiased">
-        <div class="min-h-screen bg-slate-100">
+
+    <script>
+    if (localStorage.getItem('theme') === 'dark' ||
+        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    }
+</script>
+    <body class="bg-slate-100  text-slate-800 antialiased">
+        <div class="min-h-screen bg-slate-100 " >
             <div class="flex min-h-screen flex-col lg:flex-row">
                 @include('layouts.shop_owner.navbar')
 
                 <div class="flex min-h-screen flex-1 flex-col">
                     @include('layouts.shop_owner.header')
 
-                    <main class="flex-1 overflow-x-hidden lg:p-6 ">
+                    <main class="flex-1 overflow-x-hidden lg:p-6 dark:bg-gray-900">
                         <div class="mx-auto ">
                             {{ $slot }}
                         </div>

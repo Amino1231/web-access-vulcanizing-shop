@@ -16,9 +16,9 @@ Route::prefix('customer')->middleware(['customer'])->group(function () {
     Route::livewire('/profile', 'pages::customer.profile')->name('customer.profile');
     Route::livewire('/update/profile', 'pages::customer.update-profile')->name('customer.update_profile');
     Route::livewire('/product/index', 'pages::customer.product-index')->name('customer.product_index');
-    Route::livewire('/order/details', 'pages::customer.order-details')->name('customer.order_details');
-    Route::livewire('/order/checkout', 'pages::customer.order-checkout')->name('customer.order_checkout');
-    Route::livewire('/order/history', 'pages::customer.order-history')->name('customer.order_history');
+    Route::livewire('/product/{product}', 'pages::customer.product-details')->name('customer.product_detail');
+    Route::livewire('/checkout', 'pages::customer.order-checkout')->name('customer.checkout');
+    Route::livewire('/orders', 'pages::customer.order-history')->name('customer.orders');
 });
 
 Route::middleware(['auth', 'owner'])->prefix('owner')->group(function () {
@@ -30,6 +30,7 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->group(function () {
     Route::livewire('/order_management', 'pages::shop_owner.order-management')->name('owner.order_management');
     Route::livewire('/products/create', 'pages::shop_owner.create-product-post')->name('owner.product_create');
     Route::livewire('/products', 'pages::shop_owner.product-post-table')->name('owner.products');
+    Route::livewire('/products/{product}/edit', 'pages::shop_owner.update-product-post')->name('owner.product_edit');
     Route::livewire('/categories', 'pages::shop_owner.category-management')->name('owner.categories');
     Route::livewire('/inventory', 'pages::shop_owner.inventory-management')->name('owner.inventory');
 });
