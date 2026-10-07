@@ -6,7 +6,7 @@
         <div class="absolute top-20 left-10 w-72 h-72 bg-orange-500 rounded-full blur-3xl"></div>
         <div class="absolute bottom-10 right-10 w-96 h-96 bg-orange-400 rounded-full blur-3xl"></div>
       </div>
-      
+
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
         <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <!-- Left content -->
@@ -15,26 +15,26 @@
               <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
               Open 24/7 • Fast Service
             </div>
-            
+
             <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white leading-tight mb-6">
               Your Trusted
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-600">Vulcanizing</span>
               Shop
             </h1>
-            
+
             <p class="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto lg:mx-0">
               Professional tire repair, replacement, and vulcanizing services. We get you back on the road quickly and safely.
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
-              <a href="#" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/30 transition-all hover:shadow-orange-500/40 hover:-translate-y-0.5">
+              <a href="#location" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/30 transition-all hover:shadow-orange-500/40 hover:-translate-y-0.5">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Get Directions
               </a>
-              <a href="#" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:-translate-y-0.5">
+              <a href="tel:+15551234567" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:-translate-y-0.5">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
@@ -77,7 +77,7 @@
                 <div class="absolute bottom-16 right-20 w-3 h-3 bg-orange-500 rounded-full animate-ping"></div>
                 <div class="absolute bottom-16 right-20 w-3 h-3 bg-orange-500 rounded-full"></div>
               </div>
-              
+
               <div class="p-5 sm:p-6">
                 <div class="flex items-start gap-4">
                   <div class="w-10 h-10 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -136,12 +136,12 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Tire Vulcanizing</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">Hot and cold vulcanizing for permanent tire repairs. Stronger than patches, built to last.</p>
-            <div class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
+            <a href="#" wire:navigate class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
               Learn more
               <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-            </div>
+            </a>
           </div>
 
           <!-- Service 2 -->
@@ -153,12 +153,12 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Tire Replacement</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">New and used tires for all vehicle types. We'll help you find the perfect fit for your ride.</p>
-            <div class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
+            <a href="#" wire:navigate class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
               Learn more
               <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-            </div>
+            </a>
           </div>
 
           <!-- Service 3 -->
@@ -170,12 +170,12 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Puncture Repair</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">Quick and reliable puncture fixes. Most repairs done in under 30 minutes.</p>
-            <div class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
+            <a href="#" wire:navigate class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
               Learn more
               <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-            </div>
+            </a>
           </div>
 
           <!-- Service 4 -->
@@ -187,12 +187,12 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Tire Inflation</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">Proper tire pressure for better fuel efficiency and longer tire life. Free with any service.</p>
-            <div class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
+            <a href="#" wire:navigate class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
               Learn more
               <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-            </div>
+            </a>
           </div>
 
           <!-- Service 5 -->
@@ -204,12 +204,12 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Wheel Balancing</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">Smooth rides with precision wheel balancing. Reduce vibration and tire wear.</p>
-            <div class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
+            <a href="#" wire:navigate class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
               Learn more
               <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-            </div>
+            </a>
           </div>
 
           <!-- Service 6 -->
@@ -221,24 +221,24 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Emergency Roadside</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">Stranded? We come to you. 24/7 emergency roadside tire assistance.</p>
-            <div class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
+            <a href="#" wire:navigate class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
               Learn more
               <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-            </div>
+            </a>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="py-16 sm:py-20 bg-gradient-to-r from-orange-500 to-orange-600">
+    <section id="location" class="py-16 sm:py-20 bg-gradient-to-r from-orange-500 to-orange-600">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white mb-4">Need Tire Service Now?</h2>
         <p class="text-orange-100 max-w-xl mx-auto mb-8">Don't wait. Our team is ready to help you get back on the road safely.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="#" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-orange-600 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
+          <a href="tel:+15551234567" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-orange-600 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>

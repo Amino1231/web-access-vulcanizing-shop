@@ -45,8 +45,51 @@ new class extends Component
         RateLimiter::clear($key);
         session()->regenerate();
 
+        return $this->redirectBasedOnRole();
+    }
+
+    /**
+     * Send the user to the correct dashboard based on their Spatie role.
+     */
+    protected function redirectBasedOnRole()
+    {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        return redirect()->route('customer.dashboard');
+        // Spatie: check roles in priority order (highest privilege first)
+        if ($user->hasRole('admin')) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user->hasRole('owner')) {
+            // Owners must have an approved shop to access the dashboard.
+            // Adjust 'shop' and 'is_approved' to match your actual relation/column.
+            $shop = $user->shop ?? null;
+
+            if (! $shop || ! ($shop->is_approved ?? false)) {
+                return redirect()->route('owner.business_setup');
+            }
+
+            return redirect()->route('owner.dashboard');
+        }
+
+        if ($user->hasRole('employee')) {
+            // You don't have an employee.dashboard route yet.
+            // Point employees to the owner dashboard for now, or create their own.
+            return redirect()->route('owner.dashboard');
+        }
+
+        if ($user->hasRole('customer')) {
+            return redirect()->route('customer.dashboard');
+        }
+
+        // No role assigned — log them out and tell them why.
+        Auth::logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        $this->addError('email', 'Your account has no assigned role. Please contact support.');
+
+        return null;
     }
-}; ?>
+};
