@@ -3,11 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Attribute extends Model
 {
-      protected $fillable = [
+    protected $fillable = [
         'tenant_id',
-        'name'
+        'name',
     ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function values(): HasMany
+    {
+        return $this->hasMany(AttributeValue::class);
+    }
 }

@@ -2,19 +2,27 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        Role::firstOrCreate(['name' => 'admin', "guard_name" => 'web']);
-        Role::firstOrCreate(['name' => 'customer' , "guard_name" => 'web']);
-        Role::firstOrCreate(['name' => 'owner' , "guard_name" => 'web']);
+        // Reset cached roles/permissions
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $roles = ['admin', 'owner', 'customer', 'employee'];
+
+        foreach ($roles as $role) {
+            Role::updateOrCreate(
+                ['name' => $role, 'guard_name' => 'web'],
+                []
+            );
+        }
+
+        // Also reset cache after creating
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

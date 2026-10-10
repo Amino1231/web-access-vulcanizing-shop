@@ -16,17 +16,16 @@ return new class extends Migration
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('product_id')->nullable()->constrained('products')->cascadeOnDelete();
             $table->foreignId('service_id')->nullable()->constrained('services')->cascadeOnDelete();
-            $table->foreignId('service_category_id')->nullable()->constrained('service_categories')->cascadeOnDelete();
-            $table->foreignId('product_category_id')->nullable()->constrained('product_categories')->cascadeOnDelete();
             $table->string('name');
-            $table->string('slug')->unique();
-            $table->string('type'); 
+            $table->string('slug');
+            $table->unique(['tenant_id', 'slug']);
             $table->string('attachment')->nullable();
             $table->string('image')->nullable();
             $table->decimal('price', 12, 2)->nullable();
             $table->text('description')->nullable();
             $table->string('status')->default('draft');
             $table->timestamp('archived_at')->nullable();
+            $table->index(['tenant_id', 'status']);
             $table->timestamps();
         });
     }

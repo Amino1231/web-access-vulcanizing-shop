@@ -19,7 +19,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
     public string $search = '';
     public string $categoryFilter = '';
     public string $stockFilter = '';
-    public string $statusFilter = '';  
+    public string $statusFilter = '';
     public string $sortField = 'created_at';
     public string $sortDirection = 'desc';
     public int $perPage = 10;
@@ -65,7 +65,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
     #[Computed]
     public function tenantId(): ?int
     {
-        return Auth::user()?->tenant?->id;
+        return Auth::user()?->currentTenant()?->id;
     }
 
     #[Computed]
@@ -285,4 +285,3 @@ new #[Layout('layouts.shop_owner')] class extends Component
         session()->flash('success', 'Product deleted successfully.');
     }
 };
-?>

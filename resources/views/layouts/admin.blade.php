@@ -3,78 +3,84 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ $title ?? config('app.name') }}</title>
+
+        <script>
+            (function () {
+                const stored = localStorage.getItem('theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (stored === 'dark' || (!stored && prefersDark)) {
+                    document.documentElement.classList.add('dark');
+                }
+            })();
+        </script>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
         @livewireStyles
     </head>
-    <body>
-    <div class="min-h-screen bg-slate-100 text-slate-800 antialiased">
-    <div class="flex min-h-screen flex-col lg:flex-row">
-        @include('layouts.admin.navbar')
 
-        <div class="flex min-h-screen flex-1 flex-col">
-            @include('layouts.admin.header')
+    <body class="min-h-screen bg-slate-100 text-slate-800 antialiased dark:bg-gray-950 dark:text-gray-100">
 
-            <main class="flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">
-                <div class="mx-auto ">
-                    {{ $slot }}
-                </div>
-            </main>
+        <div class="flex min-h-screen flex-col lg:flex-row">
+
+            @include('layouts.admin.navbar')
+
+            <div class="flex min-h-screen min-w-0 flex-1 flex-col">
+
+                @include('layouts.admin.header')
+
+                <main class="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:p-6">
+                    <div class="mx-auto w-full max-w-7xl">
+                        {{ $slot }}
+                    </div>
+                </main>
+            </div>
         </div>
-    </div>
-</div>
 
-     @livewireScripts
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const toggle = document.getElementById('adminSidebarToggle');
-        const closeButton = document.getElementById('adminSidebarClose');
-        const sidebar = document.getElementById('adminSidebar');
-        const overlay = document.getElementById('adminSidebarOverlay');
+        @livewireScripts
 
-        const setSidebar = (open) => {
-            if (!sidebar || !overlay) return;
+        <script>
+            (function () {
+                const sidebar  = document.getElementById('adminSidebar');
+                const overlay  = document.getElementById('adminSidebarOverlay');
+                const openBtn  = document.getElementById('adminSidebarToggle');
+                const closeBtn = document.getElementById('adminSidebarClose');
 
-            if (window.innerWidth < 1024) {
-                sidebar.classList.toggle('-translate-x-full', !open);
-                sidebar.classList.toggle('translate-x-0', open);
-                overlay.classList.toggle('hidden', !open);
-            } else {
-                sidebar.classList.remove('-translate-x-full', 'translate-x-0');
-                overlay.classList.add('hidden');
-            }
-        };
+                if (! sidebar || ! overlay) return;
 
-        if (toggle) {
-            toggle.addEventListener('click', function () {
-                const isOpen = !sidebar.classList.contains('translate-x-0');
-                setSidebar(isOpen);
-            });
-        }
+                function openSidebar() {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                }
 
-        if (closeButton) {
-            closeButton.addEventListener('click', function () {
-                setSidebar(false);
-            });
-        }
+                function closeSidebar() {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
 
-        if (overlay) {
-            overlay.addEventListener('click', function () {
-                setSidebar(false);
-            });
-        }
+                openBtn?.addEventListener('click', openSidebar);
+                closeBtn?.addEventListener('click', closeSidebar);
+                overlay?.addEventListener('click', closeSidebar);
 
-        window.addEventListener('resize', function () {
-            if (window.innerWidth >= 1024) {
-                sidebar?.classList.remove('-translate-x-full', 'translate-x-0');
-                overlay?.classList.add('hidden');
-            }
-        });
-    });
-</script>
-   
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') closeSidebar();
+                });
+
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth >= 1024) {
+                        sidebar.classList.remove('-translate-x-full');
+                        overlay.classList.add('hidden');
+                        document.body.style.overflow = '';
+                    } else {
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                });
+            })();
+        </script>
     </body>
 </html>

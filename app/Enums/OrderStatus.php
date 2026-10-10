@@ -10,14 +10,29 @@ enum OrderStatus: string
     case Completed  = 'completed';
     case Cancelled  = 'cancelled';
 
+    // ─────────────────────────────────────────
+    // Display
+    // ─────────────────────────────────────────
+
     public function label(): string
     {
         return match ($this) {
             self::Pending    => 'Pending',
             self::Processing => 'Processing',
-            self::Ready      => 'Ready for pickup',
+            self::Ready      => 'Ready',
             self::Completed  => 'Completed',
             self::Cancelled  => 'Cancelled',
+        };
+    }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::Pending    => 'amber',
+            self::Processing => 'blue',
+            self::Ready      => 'indigo',
+            self::Completed  => 'emerald',
+            self::Cancelled  => 'red',
         };
     }
 
@@ -52,35 +67,45 @@ enum OrderStatus: string
         };
     }
 
-    public function isFinal(): bool
-    {
-        return in_array($this, [self::Completed, self::Cancelled], true);
-    }
+    // ─────────────────────────────────────────
+    // State transitions
+    // ─────────────────────────────────────────
 
-    public function canBeCancelled(): bool
-    {
-        return $this === self::Pending;
-    }
-
+    /** Can this order be accepted (Pending → Processing)? */
     public function canBeProcessed(): bool
     {
         return $this === self::Pending;
     }
 
+    /** Can this order be marked ready (Processing → Ready)? */
     public function canBeMarkedReady(): bool
     {
         return $this === self::Processing;
     }
 
+    /** Can this order be completed (Ready → Completed)? */
     public function canBeCompleted(): bool
     {
         return $this === self::Ready;
     }
 
+    /** Can this order be cancelled? */
+    public function canBeCancelled(): bool
+    {
+        return in_array($this, [self::Pending, self::Processing], true);
+    }
+
+    /** Is this order done — no more transitions? */
+    public function isFinal(): bool
+    {
+        return in_array($this, [self::Completed, self::Cancelled], true);
+    }
+
     public static function options(): array
     {
-        return collect(self::cases())
-            ->mapWithKeys(fn ($c) => [$c->value => $c->label()])
-            ->all();
+        return array_map(
+            fn (self $c) => ['value' => $c->value, 'label' => $c->label()],
+            self::cases()
+        );
     }
 }

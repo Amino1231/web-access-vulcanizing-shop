@@ -15,12 +15,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+            $table->index(['tenant_id', 'created_at']);
             $table->string('type');
             $table->integer('quantity');
             $table->integer('before_stock');
             $table->integer('after_stock');
-            $table->string('reference_type')->nullable();
-            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->nullableMorphs('reference');
             $table->text('remarks')->nullable();
             $table->timestamps();
         });

@@ -42,15 +42,22 @@ new #[Layout('layouts.customer')] class extends Component
     #[Computed]
     public function categories(): array
     {
+        $categoryIds = Post::query()
+            ->published()
+            ->whereNotNull('product_id')
+            ->join('products', 'products.id', '=', 'posts.product_id')
+            ->whereNotNull('products.category_id')
+            ->distinct()
+            ->pluck('products.category_id')
+            ->all();
+
+        if (empty($categoryIds)) {
+            return [];
+        }
+
         return ProductCategory::query()
             ->select('id', 'name')
-            ->whereIn('id', function ($q) {
-                $q->select('product_category_id')
-                    ->from('posts')
-                    ->where('status', 'published')
-                    ->whereNull('archived_at')
-                    ->whereNotNull('product_category_id');
-            })
+            ->whereIn('id', $categoryIds)
             ->orderBy('name')
             ->get()
             ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])
@@ -82,12 +89,14 @@ new #[Layout('layouts.customer')] class extends Component
             ->whereNotNull('product_id')
             ->with([
                 'product' => fn ($q) => $q->withoutGlobalScope('tenant')
-                    ->select('id', 'tenant_id', 'category_id', 'name', 'sku', 'stock', 'low_stock_alert'),
+                    ->select('id', 'tenant_id', 'category_id', 'name', 'sku', 'stock', 'low_stock_alert')
+                    ->withCount(['reviews as reviews_count' => fn ($r) => $r->visible()])
+                    ->withAvg(['reviews as reviews_avg_rating' => fn ($r) => $r->visible()], 'rating'),
                 'product.category:id,name',
                 'tenant:id,name',
             ])
             ->select([
-                'id', 'tenant_id', 'product_id', 'product_category_id',
+                'id', 'tenant_id', 'product_id',
                 'name', 'slug', 'image', 'price', 'description', 'created_at',
             ])
             ->when($this->search !== '', function ($q) {
@@ -97,12 +106,14 @@ new #[Layout('layouts.customer')] class extends Component
                         ->orWhere('posts.description', 'like', $term);
                 });
             })
-            ->when($this->categoryFilter !== '', fn ($q) => $q->where('product_category_id', $this->categoryFilter))
+            ->when($this->categoryFilter !== '', function ($q) {
+                $q->whereHas('product', fn ($p) => $p->where('category_id', $this->categoryFilter));
+            })
             ->when($this->tenantFilter !== '', fn ($q) => $q->where('tenant_id', $this->tenantFilter))
-            ->when($this->sort === 'price_asc', fn ($q) => $q->orderBy('price', 'asc'))
+            ->when($this->sort === 'price_asc',  fn ($q) => $q->orderBy('price', 'asc'))
             ->when($this->sort === 'price_desc', fn ($q) => $q->orderBy('price', 'desc'))
-            ->when($this->sort === 'name', fn ($q) => $q->orderBy('name', 'asc'))
-            ->when($this->sort === 'latest', fn ($q) => $q->orderBy('created_at', 'desc'))
+            ->when($this->sort === 'name',       fn ($q) => $q->orderBy('name', 'asc'))
+            ->when($this->sort === 'latest',     fn ($q) => $q->orderBy('created_at', 'desc'))
             ->paginate($this->perPage);
     }
 
@@ -119,5 +130,3 @@ new #[Layout('layouts.customer')] class extends Component
             ->get();
     }
 };
-?>
-

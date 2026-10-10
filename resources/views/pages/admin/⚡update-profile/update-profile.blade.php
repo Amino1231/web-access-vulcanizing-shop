@@ -28,7 +28,7 @@
 
             <div class="field">
                 <label for="phone">Phone</label>
-                <input id="phone" type="text" wire:model="phone" placeholder="+63 917 000 0000">
+                <input id="phone" type="text" wire:model="phone" placeholder="09000000000">
                 @error('phone') <span class="error">{{ $message }}</span> @enderror
             </div>
 

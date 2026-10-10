@@ -9,16 +9,18 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AdminMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  Closure(Request): (Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::check() || Auth::user()->hasRole('admin')){
-              return $next($request);
+        // Not logged in → 404
+        if (! Auth::check()) {
+            abort(404);
         }
-      abort(404, 'Unauthorize');
+
+        // Logged in but not an admin → 404
+        if (! Auth::user()->hasRole('admin')) {
+            abort(404);
+        }
+
+        return $next($request);
     }
 }

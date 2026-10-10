@@ -3,11 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class AttributeValue extends Model
 {
-      protected $fillable = [
+    protected $fillable = [
         'attribute_id',
-        'value'
+        'value',
     ];
+
+    public function attribute(): BelongsTo
+    {
+        return $this->belongsTo(Attribute::class);
+    }
+
+    public function variants(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Variant::class,
+            'attribute_value_variants',
+            'attribute_value_id',
+            'variant_id'
+        );
+    }
 }

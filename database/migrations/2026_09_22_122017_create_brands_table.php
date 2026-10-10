@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('brands', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
-            $table->string('brand_name');
-            $table->string('brand_slug')->unique()->index();
+            $table->string('brand_name');         
+            $table->string('brand_slug');
+            $table->unique(['tenant_id', 'brand_slug']);
             $table->timestamps();
         });
     }

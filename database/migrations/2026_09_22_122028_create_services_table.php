@@ -17,10 +17,10 @@ return new class extends Migration
             $table->foreignId('service_category_id')->constrained('service_categories')->cascadeOnDelete();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->integer('duration_minutes');
+            $table->integer('duration_minutes')->nullable();
             $table->decimal('price', 12, 2);
-            $table->boolean('is_vehicle_service')->default(false);
-            $table->boolean('is_active')->deault(false);
+            $table->boolean('is_vehicle_service')->default(false);  
+            $table->boolean('is_active')->default(false);
             $table->timestamps();
         });
     }

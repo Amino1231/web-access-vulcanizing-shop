@@ -22,7 +22,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('problem_type');
             $table->text('description')->nullable();
-            $table->string('status');
+            $table->enum('status', ['pending', 'accepted', 'completed'])->default('pending');
             $table->timestamp('requested_at');
             $table->timestamp('accepted_at')->nullable();
             $table->timestamp('completed_at')->nullable();

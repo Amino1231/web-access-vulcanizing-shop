@@ -4,6 +4,7 @@ use App\Models\ProductCategory;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -11,76 +12,80 @@ new #[Layout('layouts.shop_owner')] class extends Component
 {
     public string $name = '';
     public string $description = '';
-    public array $categories = [];
 
     public function mount(): void
     {
-        $this->loadCategories();
+        // Nothing to preload — categories are a computed property.
     }
 
-    public function loadCategories(): void
+    #[Computed]
+    public function tenantId(): ?int
     {
-        $tenant = Auth::user()?->tenant;
+        return Auth::user()?->currentTenant()?->id;
+    }
 
-        $this->categories = ProductCategory::query()
-            ->when($tenant, fn ($query) => $query->where('tenant_id', $tenant->id), fn ($query) => $query->whereRaw('0 = 1'))
+    #[Computed]
+    public function categories(): array
+    {
+        if (! $this->tenantId) {
+            return [];
+        }
+
+        return ProductCategory::query()
+            ->where('tenant_id', $this->tenantId)
             ->orderBy('name')
-            ->get()
-            ->map(fn ($category) => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-                'description' => $category->description,
+            ->get(['id', 'name', 'slug', 'description'])
+            ->map(fn ($c) => [
+                'id'          => $c->id,
+                'name'        => $c->name,
+                'slug'        => $c->slug,
+                'description' => $c->description,
             ])
-            ->toArray();
+            ->all();
     }
 
     public function save(): void
     {
-        $tenant = Auth::user()?->tenant;
+        $tenantId = $this->tenantId;
 
-        if (! $tenant) {
+        if (! $tenantId) {
             session()->flash('error', 'No tenant account is linked to this owner profile.');
             return;
         }
 
         $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'name'        => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $categoryName = trim($this->name);
         $slug = Str::slug($categoryName) ?: 'category';
 
-        if (ProductCategory::query()
-            ->where('tenant_id', $tenant->id)
-            ->where('slug', $slug)
-            ->exists()) {
+        // Check for duplicate slug within this tenant
+        if (ProductCategory::where('tenant_id', $tenantId)->where('slug', $slug)->exists()) {
             $this->addError('name', 'This category already exists for your shop.');
-
             return;
         }
 
         try {
             ProductCategory::create([
-                'tenant_id' => $tenant->id,
-                'name' => $categoryName,
-                'slug' => $slug,
-                'description' => trim($this->description),
+                'tenant_id'   => $tenantId,
+                'name'        => $categoryName,
+                'slug'        => $slug,
+                'description' => trim($this->description) ?: null,
             ]);
-        } catch (QueryException $exception) {
-            if ($exception->getCode() === '23000') {
+        } catch (QueryException $e) {
+            if ((int) $e->getCode() === 23000) {
                 $this->addError('name', 'This category already exists for your shop.');
-
                 return;
             }
-
-            throw $exception;
+            throw $e;
         }
 
         $this->reset(['name', 'description']);
-        $this->loadCategories();
+        $this->resetValidation();
+        unset($this->categories);   // force the computed to refresh
+
         session()->flash('success', 'Category created successfully.');
     }
-
 };

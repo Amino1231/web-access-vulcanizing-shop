@@ -13,11 +13,22 @@ class Order extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id', 'customer_id', 'order_number', 'status',
-        'subtotal', 'discount', 'tax', 'total',
-        'payment_method', 'notes',
-        'processed_by', 'processed_at', 'completed_at',
-        'cancelled_at', 'cancellation_reason', 'sale_id',
+        'tenant_id',
+        'customer_id',
+        'order_number',
+        'status',
+        'subtotal',
+        'discount',
+        'tax',
+        'total',
+        'payment_method',
+        'notes',
+        'processed_by',
+        'processed_at',
+        'completed_at',
+        'cancelled_at',
+        'cancellation_reason',
+        'sale_id',
     ];
 
     protected $casts = [
@@ -30,6 +41,11 @@ class Order extends Model
         'tax'          => 'decimal:2',
         'total'        => 'decimal:2',
     ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 
     public function customer(): BelongsTo
     {

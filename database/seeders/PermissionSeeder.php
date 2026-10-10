@@ -20,11 +20,14 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
-    foreach($this->defaultPermission as $permission ){
-        Permission::firstOrCreate([
-            'name' => $permission,
-            'guard_name' => 'web'
-        ]);
-    }
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        foreach($this->defaultPermission as $permission ){
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'web'
+            ]);
+        }
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

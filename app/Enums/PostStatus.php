@@ -4,33 +4,38 @@ namespace App\Enums;
 
 enum PostStatus: string
 {
-    case Draft = 'draft';
-    case Scheduled = 'scheduled';
+    case Draft     = 'draft';
     case Published = 'published';
-    case Archived = 'archived';
+    case Archived  = 'archived';
 
     public function label(): string
     {
         return match ($this) {
-            self::Draft => 'Draft',
-            self::Scheduled => 'Scheduled',
+            self::Draft     => 'Draft',
             self::Published => 'Published',
-            self::Archived => 'Archived',
+            self::Archived  => 'Archived',
         };
     }
 
     public function color(): string
     {
         return match ($this) {
-            self::Draft => 'slate',
-            self::Scheduled => 'amber',
+            self::Draft     => 'slate',
             self::Published => 'emerald',
-            self::Archived => 'red',
+            self::Archived  => 'rose',
         };
     }
 
-    public function isVisibleToCustomers(): bool
+    public function isVisible(): bool
     {
         return $this === self::Published;
+    }
+
+    public static function options(): array
+    {
+        return array_map(
+            fn (self $c) => ['value' => $c->value, 'label' => $c->label()],
+            self::cases()
+        );
     }
 }

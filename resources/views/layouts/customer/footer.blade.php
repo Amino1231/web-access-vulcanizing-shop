@@ -97,9 +97,8 @@
                 &copy; {{ date('Y') }} VulcanPro. All rights reserved.
             </p>
             <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-                <a href="#" class="text-slate-500 dark:text-gray-500 transition hover:text-[#FF5E14]">Privacy Policy</a>
-                <a href="#" class="text-slate-500 dark:text-gray-500 transition hover:text-[#FF5E14]">Terms of Service</a>
-                <a href="#" class="text-slate-500 dark:text-gray-500 transition hover:text-[#FF5E14]">Cookies</a>
+                <a href="{{ route('privacy_policy') }}" target="_blank" class="text-slate-500 dark:text-gray-500 transition hover:text-[#FF5E14]">Privacy Policy</a>
+                <a href="{{ route('terms_of_service') }}" target="_blank" class="text-slate-500 dark:text-gray-500 transition hover:text-[#FF5E14]">Terms of Service</a>
             </div>
         </div>
     </div>

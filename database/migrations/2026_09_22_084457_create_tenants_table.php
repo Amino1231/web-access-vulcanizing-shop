@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('tenants', function (Blueprint $table) {
@@ -30,15 +27,14 @@ return new class extends Migration
             $table->text('rejection_reason')->nullable();
             $table->json('missing_requirements')->nullable();
             $table->timestamp('submitted_at')->nullable();
+            $table->timestamp('approved_at')->nullable();
             $table->timestamps();
+
             $table->index(['is_active', 'latitude', 'longitude']);
             $table->index('verification_status');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('tenants');

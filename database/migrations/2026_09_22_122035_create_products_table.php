@@ -15,10 +15,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('category_id')->constrained('product_categories')->cascadeOnDelete();
-            $table->foreignId('brand_id')->nullable()->constrained('brands')->cascadeOnDelete();
+            $table->foreignId('brand_id')->nullable()->constrained('brands')->nullOnDelete();
             $table->string('name');
-            $table->string('slug')->unique();
-            $table->string('sku')->unique();
+            $table->string('slug');
+            $table->string('sku');
+            $table->unique(['tenant_id', 'slug']);
+            $table->unique(['tenant_id', 'sku']);
             $table->string('barcode')->nullable();
             $table->decimal('cost_price', 12, 2);
             $table->decimal('selling_price', 12, 2);

@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->string('sku')->unique();
+            $table->string('sku');
+            $table->unique(['tenant_id', 'sku']);
             $table->decimal('price', 10, 2);
             $table->integer('stock_quantity')->default(0);
             $table->string('image')->nullable();

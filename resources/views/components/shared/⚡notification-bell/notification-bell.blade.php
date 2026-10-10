@@ -1,0 +1,89 @@
+<div class="relative" wire:poll.30s>
+    {{-- Bell button --}}
+    <button wire:click="toggle" type="button"
+        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-800">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+
+        @if ($this->unreadCount > 0)
+        <span class="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#FF5E14] px-1 text-[10px] font-bold text-white">
+            {{ $this->unreadCount > 99 ? '99+' : $this->unreadCount }}
+        </span>
+        @endif
+    </button>
+
+    {{-- Dropdown --}}
+    @if ($open)
+    <div class="absolute right-0 z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+        {{-- Header --}}
+        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-gray-800">
+            <div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">Notifications</p>
+                <p class="text-[11px] text-slate-500 dark:text-gray-400">
+                    {{ $this->unreadCount }} unread
+                </p>
+            </div>
+            @if ($this->notifications->count() > 0)
+            <div class="flex items-center gap-1">
+                @if ($this->unreadCount > 0)
+                <button wire:click="markAllAsRead" type="button"
+                    class="rounded-lg px-2 py-1 text-[11px] font-semibold text-[#FF5E14] transition hover:bg-orange-50 dark:hover:bg-orange-500/10">
+                    Mark all read
+                </button>
+                @endif
+                <button wire:click="clearAll" type="button"
+                    wire:confirm="Clear all notifications? This can't be undone."
+                    class="rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100 dark:text-gray-400 dark:hover:bg-gray-800">
+                    Clear
+                </button>
+            </div>
+            @endif
+        </div>
+
+        {{-- List --}}
+        <div class="max-h-96 overflow-y-auto">
+            @forelse ($this->notifications as $n)
+                @php
+                    $isUnread = is_null($n->read_at);
+                    $data = $n->data;
+                @endphp
+                <button wire:click="markAsRead('{{ $n->id }}')" type="button"
+                    class="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-0 hover:bg-slate-50 dark:border-gray-800 dark:hover:bg-gray-800/50 {{ $isUnread ? 'bg-orange-50/40 dark:bg-orange-500/5' : '' }}">
+
+                    <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+                        {{ str_starts_with($data['kind'] ?? '', 'shop.') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                           : (str_starts_with($data['kind'] ?? '', 'appointment.') ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400'
+                           : 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400') }}">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-slate-900 dark:text-white">
+                            {{ $data['title'] ?? 'Notification' }}
+                        </p>
+                        <p class="mt-0.5 line-clamp-2 text-xs text-slate-600 dark:text-gray-400">
+                            {{ $data['message'] ?? '' }}
+                        </p>
+                        <p class="mt-1 text-[10px] text-slate-400 dark:text-gray-500">
+                            {{ $n->created_at->diffForHumans() }}
+                        </p>
+                    </div>
+
+                    @if ($isUnread)
+                    <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#FF5E14]"></span>
+                    @endif
+                </button>
+            @empty
+                <div class="px-4 py-12 text-center">
+                    <p class="text-sm text-slate-500 dark:text-gray-400">No notifications yet.</p>
+                </div>
+            @endforelse
+        </div>
+    </div>
+    @endif
+</div>

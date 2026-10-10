@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->string('name');
-            $table->string('slug')->unique()->index();
+            $table->string('slug');
+            $table->unique(['tenant_id', 'slug']);
             $table->text('description')->nullable();
             $table->timestamps();
         });

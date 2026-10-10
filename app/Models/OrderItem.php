@@ -11,15 +11,28 @@ class OrderItem extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id', 'order_id', 'product_id', 'variant_id',
-        'product_name', 'variant_label', 'sku',
-        'unit_price', 'quantity', 'line_total',
+        'tenant_id',
+        'order_id',
+        'product_id',
+        'variant_id',
+        'product_name',
+        'variant_label',
+        'sku',
+        'unit_price',
+        'quantity',
+        'line_total',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'line_total' => 'decimal:2',
+        'quantity'   => 'integer',
     ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 
     public function order(): BelongsTo
     {

@@ -187,8 +187,14 @@
                             </td>
 
                             <td class="px-4 py-3 text-right">
-                                <p class="text-sm font-semibold text-slate-900 dark:text-white">₱{{ number_format($product->selling_price, 2) }}</p>
-                                <p class="text-xs text-slate-500 line-through dark:text-gray-400">₱{{ number_format($product->cost_price, 2) }}</p>
+                                <p class="text-sm font-semibold text-slate-900 dark:text-white">
+                                    ₱{{ number_format($product->selling_price, 2) }}
+                                </p>
+                                @if ((float) $product->cost_price !== (float) $product->selling_price)
+                                    <p class="text-xs text-slate-500 dark:text-gray-400">
+                                        Cost: ₱{{ number_format($product->cost_price, 2) }}
+                                    </p>
+                                @endif
                             </td>
 
                             <td class="px-4 py-3 text-center">

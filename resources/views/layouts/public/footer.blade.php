@@ -94,8 +94,8 @@
     <div class="mt-12 pt-8 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
       <p class="text-sm text-gray-500">&copy; 2025 VulcanPro. All rights reserved.</p>
       <div class="flex gap-6">
-        <a href="#" class="text-sm text-gray-500 hover:text-orange-400 transition-colors">Privacy Policy</a>
-        <a href="#" class="text-sm text-gray-500 hover:text-orange-400 transition-colors">Terms of Service</a>
+        <a href="{{ route('privacy_policy') }}" target="_blank" class="text-sm text-gray-500 hover:text-orange-400 transition-colors">Privacy Policy</a>
+        <a href="{{ route('terms_of_service') }}" target="_blank" class="text-sm text-gray-500 hover:text-orange-400 transition-colors">Terms of Service</a>
       </div>
     </div>
   </div>

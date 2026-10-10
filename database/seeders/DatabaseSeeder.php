@@ -2,47 +2,45 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Database\Seeders\PermissionSeeder;
-use Database\Seeders\RoleSeeder;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
+        // 1. Roles & permissions first
         $this->call([
-            RoleSeeder::Class,
-            PermissionSeeder::Class
+            RoleSeeder::class,
+            PermissionSeeder::class,
         ]);
 
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@gmail.com'],
-            [
-                'name' => 'Admin',
-                'password' => Hash::make('admin123')
-            ]
-        );
+        // 2. Users, tenants, and the pivot
+        $this->call([
+            UserSeeder::class,
+            TenantSeeder::class,
+        ]);
 
-        $admin->assignRole('admin');
+        // 3. Catalog (per tenant)
+        $this->call([
+            ProductCategorySeeder::class,
+            ServiceCategorySeeder::class,
+            BrandSeeder::class,
+            AttributeSeeder::class,
+            ProductSeeder::class,
+            ServiceSeeder::class,
+            PostSeeder::class,
+        ]);
 
-
-            $owner = User::firstOrCreate(
-            ['email' => 'owner@gmail.com'],
-            [
-                'name' => 'Owner',
-                'password' => Hash::make('owner123')
-            ]
-        );
-
-        $owner->assignRole('owner');
+        // 4. Operations
+        $this->call([
+            EmployeeSeeder::class,
+            VehicleSeeder::class,
+            AppointmentSeeder::class,
+            RoadSideSeeder::class,
+            OrderSeeder::class,
+            SaleSeeder::class,
+            InventorySeeder::class,
+            ReviewSeeder::class,
+        ]);
     }
 }

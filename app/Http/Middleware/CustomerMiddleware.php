@@ -9,16 +9,18 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CustomerMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  Closure(Request): (Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
-         if(Auth::check() || Auth::user()->hasRole('customer')){
-              return $next($request);
+        // Not logged in → 404 (hide that this route exists)
+        if (! Auth::check()) {
+            abort(404);
         }
-      abort(404, 'Unauthorize');
+
+        // Logged in but not a customer → 404
+        if (! Auth::user()->hasRole('customer')) {
+            abort(404);
+        }
+
+        return $next($request);
     }
 }
