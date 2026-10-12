@@ -10,6 +10,7 @@ use App\Models\Vehicle;
 use App\Notifications\AppointmentBooked;
 use App\Services\ServiceReviewService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -102,8 +103,16 @@ new #[Layout('layouts.customer')] class extends Component
         return $query->orderBy('name')->get(['id', 'name', 'position']);
     }
 
+    /**
+     * Available time slots for the currently selected date.
+     *
+     * IMPORTANT: this method is called `timeSlots()` (not `slots()`)
+     * because `slots` is a reserved property name inside Livewire —
+     * using `$this->slots` silently returns Livewire's internal
+     * blade-slot container instead of the computed array.
+     */
     #[Computed]
-    public function slots(): array
+    public function timeSlots(): array
     {
         $post = $this->post;
         if (! $post || ! $this->selectedDate) {
@@ -200,7 +209,7 @@ new #[Layout('layouts.customer')] class extends Component
 
         return Review::query()
             ->where('service_id', $service->id)
-            ->visible() 
+            ->visible()
             ->with(['customer:id,name'])
             ->latest()
             ->limit(20)
@@ -331,7 +340,7 @@ new #[Layout('layouts.customer')] class extends Component
     {
         $this->selectedTime = '';
         $this->selectedEmployee = null;
-        unset($this->slots);
+        unset($this->timeSlots);
     }
 
     public function updatedSelectedTime(): void
@@ -344,86 +353,116 @@ new #[Layout('layouts.customer')] class extends Component
 
     public function book()
     {
-        $post = $this->post;
-        if (! $post) {
-            $this->addError('general', 'Service not found.');
-
-            return;
-        }
-
-        $this->validate([
-            'selectedDate' => ['required', 'date', 'after_or_equal:today'],
-            'selectedTime' => ['required', 'string', 'regex:/^\d{2}:\d{2}$/'],
-            'selectedVehicle' => ['nullable', 'integer', 'exists:vehicles,id'],
-            'selectedEmployee' => ['nullable', 'integer', 'exists:employees,id'],
-            'notes' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $start = Carbon::parse($this->selectedDate.' '.$this->selectedTime);
-        $end = $start->copy()->addMinutes($post->service?->duration_minutes ?? 30);
-
-        // ─── Conflict check ─────────────────
-        $conflict = Appointment::query()
-            ->where('tenant_id', $post->tenant_id)
-            ->whereDate('start_time', $this->selectedDate)
-            ->whereNotIn('status', [AppointmentStatus::Cancelled->value, AppointmentStatus::NoShow->value])
-            ->where(function ($q) use ($start, $end) {
-                $q->where('start_time', '<', $end)
-                    ->where('end_time', '>', $start);
-            })
-            ->exists();
-
-        if ($conflict) {
-            $this->addError('selectedTime', 'That slot was just taken. Please pick another.');
-            unset($this->slots);
-
-            return;
-        }
-
-        // ─── Vehicle (must belong to this customer) ────
-        $vehicleId = null;
-        if ($this->selectedVehicle) {
-            $vehicleId = Vehicle::where('customer_id', Auth::id())
-                ->whereKey($this->selectedVehicle)
-                ->value('id');
-        }
-
-        // ─── Employee (must be assigned + working that window) ────
-        $employeeId = null;
-        if ($this->selectedEmployee) {
-            $employeeId = $this->resolveEligibleEmployee($post, $start, $end);
-
-            if (! $employeeId) {
-                $this->addError(
-                    'selectedEmployee',
-                    'That staff member is not available for this time. Pick another or leave blank.'
-                );
+        try {
+            $post = $this->post;
+            if (! $post) {
+                $this->addError('general', 'Service not found.');
 
                 return;
             }
-        }
 
-        $appointment = DB::transaction(function () use ($post, $start, $end, $vehicleId, $employeeId) {
-            return Appointment::create([
-                'tenant_id' => $post->tenant_id,
-                'customer_id' => Auth::id(),
-                'service_id' => $post->service_id,
-                'vehicle_id' => $vehicleId,
-                'employee_id' => $employeeId,
-                'created_by' => Auth::id(),
-                'appointment_number' => 'APT-'.strtoupper(Str::random(8)),
-                'start_time' => $start,
-                'end_time' => $end,
-                'status' => AppointmentStatus::Scheduled->value,
-                'notes' => trim($this->notes) ?: null,
+            $this->validate([
+                'selectedDate' => ['required', 'date', 'after_or_equal:today'],
+                'selectedTime' => ['required', 'string', 'regex:/^\d{2}:\d{2}$/'],
+                'selectedVehicle' => ['nullable', 'integer', 'exists:vehicles,id'],
+                'selectedEmployee' => ['nullable', 'integer', 'exists:employees,id'],
+                'notes' => ['nullable', 'string', 'max:500'],
             ]);
-        });
 
-        $appointment->tenant?->user?->notify(new AppointmentBooked($appointment));
+            $start = Carbon::parse($this->selectedDate.' '.$this->selectedTime);
+            $end = $start->copy()->addMinutes($post->service?->duration_minutes ?? 30);
 
-        session()->flash('booking_success', $appointment->appointment_number);
+            Log::info('Booking attempt', [
+                'post_id' => $post->id,
+                'tenant_id' => $post->tenant_id,
+                'service_id' => $post->service_id,
+                'start' => $start->toDateTimeString(),
+                'end' => $end->toDateTimeString(),
+                'status_val' => AppointmentStatus::Scheduled->value,
+            ]);
 
-        return redirect()->route('customer.appointment_detail', $appointment->id);
+            // ─── Conflict check ─────────────────
+            $conflict = Appointment::query()
+                ->where('tenant_id', $post->tenant_id)
+                ->whereDate('start_time', $this->selectedDate)
+                ->whereNotIn('status', [AppointmentStatus::Cancelled->value, AppointmentStatus::NoShow->value])
+                ->where(function ($q) use ($start, $end) {
+                    $q->where('start_time', '<', $end)
+                        ->where('end_time', '>', $start);
+                })
+                ->exists();
+
+            if ($conflict) {
+                $this->addError('selectedTime', 'That slot was just taken. Please pick another.');
+                unset($this->timeSlots);
+
+                return;
+            }
+
+            // ─── Vehicle (must belong to this customer) ────
+            $vehicleId = null;
+            if ($this->selectedVehicle) {
+                $vehicleId = Vehicle::where('customer_id', Auth::id())
+                    ->whereKey($this->selectedVehicle)
+                    ->value('id');
+            }
+
+            // ─── Employee (must be assigned + working that window) ────
+            $employeeId = null;
+            if ($this->selectedEmployee) {
+                $employeeId = $this->resolveEligibleEmployee($post, $start, $end);
+
+                if (! $employeeId) {
+                    $this->addError(
+                        'selectedEmployee',
+                        'That staff member is not available for this time. Pick another or leave blank.'
+                    );
+
+                    return;
+                }
+            }
+
+            $appointment = DB::transaction(function () use ($post, $start, $end, $vehicleId, $employeeId) {
+                return Appointment::create([
+                    'tenant_id' => $post->tenant_id,
+                    'customer_id' => Auth::id(),
+                    'service_id' => $post->service_id,
+                    'vehicle_id' => $vehicleId,
+                    'employee_id' => $employeeId,
+                    'created_by' => Auth::id(),
+                    'appointment_number' => 'APT-'.strtoupper(Str::random(8)),
+                    'start_time' => $start,
+                    'end_time' => $end,
+                    'status' => AppointmentStatus::Scheduled->value,
+                    'notes' => trim($this->notes) ?: null,
+                ]);
+            });
+
+            Log::info('Appointment row created', ['id' => $appointment->id]);
+
+            $appointment->tenant?->user?->notify(new AppointmentBooked($appointment));
+
+            Log::info('Notification sent');
+
+            session()->flash('booking_success', $appointment->appointment_number);
+
+            return redirect()->route('customer.appointment_detail', $appointment->id);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Let Livewire show field-level errors normally
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Booking FAILED', [
+                'msg' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'type' => get_class($e),
+            ]);
+
+            $this->addError('general', get_class($e).': '.$e->getMessage());
+
+            return;
+        }
     }
 
     /**

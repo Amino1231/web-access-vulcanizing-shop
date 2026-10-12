@@ -4,6 +4,7 @@ use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Notifications\AppointmentStatusChanged;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -131,7 +132,10 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
     public function confirmAction(int $appointmentId, string $action): void
     {
-        $appointment = Appointment::where('tenant_id', $this->tenantId())->find($appointmentId);
+        $tenantId = $this->tenantId();
+        if (! $tenantId) return;
+
+        $appointment = Appointment::where('tenant_id', $tenantId)->find($appointmentId);
         if (! $appointment) return;
 
         $this->confirmingId     = $appointment->id;
@@ -150,7 +154,13 @@ new #[Layout('layouts.shop_owner')] class extends Component
     {
         if (! $this->confirmingId || ! $this->confirmingAction) return;
 
-        $appointment = Appointment::where('tenant_id', $this->tenantId())
+        $tenantId = $this->tenantId();
+        if (! $tenantId) {
+            $this->cancelConfirmation();
+            return;
+        }
+
+        $appointment = Appointment::where('tenant_id', $tenantId)
             ->find($this->confirmingId);
         if (! $appointment) {
             $this->cancelConfirmation();
@@ -169,9 +179,16 @@ new #[Layout('layouts.shop_owner')] class extends Component
         if ($newStatus) {
             $appointment->update(['status' => $newStatus->value]);
 
-            $appointment->customer?->notify(
-                new AppointmentStatusChanged($appointment, $newStatus->value)
-            );
+            try {
+                $appointment->customer?->notify(
+                    new AppointmentStatusChanged($appointment, $newStatus->value)
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Appointment notification failed', [
+                    'appointment_id' => $appointment->id,
+                    'error'          => $e->getMessage(),
+                ]);
+            }
         }
 
         unset($this->appointments, $this->counts);

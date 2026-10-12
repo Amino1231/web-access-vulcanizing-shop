@@ -1,9 +1,9 @@
 @php
 $toneClasses = [
-    'orange' => 'border-orange-200 bg-orange-50',
-    'green'  => 'border-emerald-200 bg-emerald-50',
-    'amber'  => 'border-amber-200 bg-amber-50',
-    'red'    => 'border-red-200 bg-red-50',
+    'orange' => 'border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/30',
+    'green'  => 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30',
+    'amber'  => 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30',
+    'red'    => 'border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/30',
 ];
 @endphp
 
@@ -12,7 +12,7 @@ $toneClasses = [
     {{-- Header --}}
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Analytics</p>
+            <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400">Analytics</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Platform reports</h1>
             <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
                 Revenue, top performers, and category breakdown across every shop.
@@ -44,7 +44,7 @@ $toneClasses = [
                     <button type="button" wire:click="setRange('{{ $key }}')"
                         class="inline-flex items-center rounded-xl border px-3.5 py-2 text-sm font-semibold transition
                             {{ $range === $key
-                                ? 'border-[#FF5E14] bg-orange-50 text-[#FF5E14] dark:bg-orange-500/10 dark:border-orange-500/40'
+                                ? 'border-[#FF5E14] bg-orange-50 text-[#FF5E14] dark:bg-orange-500/10 dark:border-orange-500/40 dark:text-orange-400'
                                 : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700' }}">
                         {{ $label }}
                     </button>
@@ -53,10 +53,10 @@ $toneClasses = [
 
             <div class="flex flex-wrap items-center gap-2">
                 <input wire:model.live="from" type="date"
-                    class="rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
-                <span class="text-xs text-slate-400">to</span>
+                    class="rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-500/20 dark:[color-scheme:dark]" />
+                <span class="text-xs text-slate-400 dark:text-gray-500">to</span>
                 <input wire:model.live="to" type="date"
-                    class="rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                    class="rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-500/20 dark:[color-scheme:dark]" />
             </div>
         </div>
     </div>
@@ -65,7 +65,7 @@ $toneClasses = [
     @php $kpis = $this->kpis; @endphp
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         @foreach($kpis as $kpi)
-            <article class="rounded-2xl border {{ $toneClasses[$kpi['tone']] ?? 'border-slate-200 bg-white' }} p-5 shadow-sm">
+            <article class="rounded-2xl border {{ $toneClasses[$kpi['tone']] ?? 'border-slate-200 bg-white dark:border-gray-800 dark:bg-gray-900' }} p-5 shadow-sm">
                 <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600 dark:text-gray-400">
                     {{ $kpi['label'] }}
                 </p>
@@ -110,12 +110,12 @@ $toneClasses = [
                 <div class="space-y-2">
                     @foreach ($topShops as $i => $shop)
                         <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/40 p-3">
-                            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">
+                            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white dark:bg-gray-100 dark:text-gray-900">
                                 {{ $i + 1 }}
                             </div>
                             @if ($shop['logo'])
                                 <img src="{{ $shop['logo'] }}" alt=""
-                                     class="h-9 w-9 shrink-0 rounded-lg border border-slate-200 object-cover" />
+                                     class="h-9 w-9 shrink-0 rounded-lg border border-slate-200 object-cover dark:border-gray-700" />
                             @else
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white dark:bg-gray-700">
                                     {{ strtoupper(substr($shop['name'], 0, 2)) }}
@@ -228,10 +228,10 @@ $toneClasses = [
                         <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ $signups['customers'] }}</span>
                     </div>
                 </div>
-                <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/40 dark:bg-orange-950/30">
                     <div class="flex items-center justify-between">
-                        <span class="text-sm font-semibold text-orange-700">Total</span>
-                        <span class="text-2xl font-bold text-orange-700">{{ $signups['total'] }}</span>
+                        <span class="text-sm font-semibold text-orange-700 dark:text-orange-400">Total</span>
+                        <span class="text-2xl font-bold text-orange-700 dark:text-orange-400">{{ $signups['total'] }}</span>
                     </div>
                 </div>
             </div>
