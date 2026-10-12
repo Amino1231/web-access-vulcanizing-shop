@@ -20,11 +20,20 @@ new #[Layout('layouts.shop_owner')] class extends Component
     use WithPagination;
 
     public string $statusFilter = 'pending';
+
     public string $search = '';
+
     public int $perPage = 15;
 
-    public function updatingStatusFilter(): void { $this->resetPage(); }
-    public function updatingSearch(): void       { $this->resetPage(); }
+    public function updatingStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
 
     #[Computed]
     public function tenantId(): ?int
@@ -60,7 +69,9 @@ new #[Layout('layouts.shop_owner')] class extends Component
     #[Computed]
     public function counts(): array
     {
-        if (! $this->tenantId) return [];
+        if (! $this->tenantId) {
+            return [];
+        }
 
         return Order::query()
             ->where('tenant_id', $this->tenantId)
@@ -81,6 +92,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         if (! $tenantId) {
             $this->dispatch('notify', type: 'error', message: 'No tenant account linked.');
+
             return;
         }
 
@@ -95,7 +107,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
                     ->firstOrFail();
 
                 if (! $order->status->canBeProcessed()) {
-                    throw new \RuntimeException('invalid_transition');
+                    throw new RuntimeException('invalid_transition');
                 }
 
                 foreach ($order->items as $item) {
@@ -103,7 +115,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 }
 
                 $order->update([
-                    'status'       => OrderStatus::Processing,
+                    'status' => OrderStatus::Processing,
                     'processed_by' => Auth::id(),
                     'processed_at' => now(),
                 ]);
@@ -114,16 +126,16 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
             unset($this->orders, $this->counts);
             $this->dispatch('notify', type: 'success', message: 'Order accepted. Stock reserved.');
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             $message = match ($e->getMessage()) {
                 'insufficient_stock' => 'Not enough stock to accept this order.',
-                'variant_missing'    => 'One of the variants no longer exists.',
-                'product_missing'    => 'One of the products no longer exists.',
+                'variant_missing' => 'One of the variants no longer exists.',
+                'product_missing' => 'One of the products no longer exists.',
                 'invalid_transition' => 'Invalid status change.',
-                default              => 'Could not accept order.',
+                default => 'Could not accept order.',
             };
             $this->dispatch('notify', type: 'error', message: $message);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
             $this->dispatch('notify', type: 'error', message: 'Could not accept order.');
         }
@@ -131,7 +143,9 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
     protected function deductStockForItem(int $tenantId, $item, Order $order): void
     {
-        if (! $item->product_id) return;
+        if (! $item->product_id) {
+            return;
+        }
 
         $product = Product::where('tenant_id', $tenantId)
             ->whereKey($item->product_id)
@@ -139,7 +153,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->first();
 
         if (! $product) {
-            throw new \RuntimeException('product_missing');
+            throw new RuntimeException('product_missing');
         }
 
         $qty = (int) $item->quantity;
@@ -152,12 +166,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 ->first();
 
             if (! $variant) {
-                throw new \RuntimeException('variant_missing');
+                throw new RuntimeException('variant_missing');
             }
 
             $before = (int) $variant->stock_quantity;
             if ($before < $qty) {
-                throw new \RuntimeException('insufficient_stock');
+                throw new RuntimeException('insufficient_stock');
             }
 
             $after = $before - $qty;
@@ -166,15 +180,15 @@ new #[Layout('layouts.shop_owner')] class extends Component
             $product->refresh()->syncStockFromVariants();
 
             Inventory::create([
-                'tenant_id'      => $tenantId,
-                'product_id'     => $product->id,
-                'type'           => 'stock_out',
-                'quantity'       => -$qty,
-                'before_stock'   => $before,
-                'after_stock'    => $after,
+                'tenant_id' => $tenantId,
+                'product_id' => $product->id,
+                'type' => 'stock_out',
+                'quantity' => -$qty,
+                'before_stock' => $before,
+                'after_stock' => $after,
                 'reference_type' => 'order',
-                'reference_id'   => $order->id,
-                'remarks'        => "Order {$order->order_number} accepted · variant {$item->variant_label}",
+                'reference_id' => $order->id,
+                'remarks' => "Order {$order->order_number} accepted · variant {$item->variant_label}",
             ]);
 
             return;
@@ -182,22 +196,22 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         $before = (int) $product->stock;
         if ($before < $qty) {
-            throw new \RuntimeException('insufficient_stock');
+            throw new RuntimeException('insufficient_stock');
         }
 
         $after = $before - $qty;
         $product->update(['stock' => $after]);
 
         Inventory::create([
-            'tenant_id'      => $tenantId,
-            'product_id'     => $product->id,
-            'type'           => 'stock_out',
-            'quantity'       => -$qty,
-            'before_stock'   => $before,
-            'after_stock'    => $after,
+            'tenant_id' => $tenantId,
+            'product_id' => $product->id,
+            'type' => 'stock_out',
+            'quantity' => -$qty,
+            'before_stock' => $before,
+            'after_stock' => $after,
             'reference_type' => 'order',
-            'reference_id'   => $order->id,
-            'remarks'        => "Order {$order->order_number} accepted",
+            'reference_id' => $order->id,
+            'remarks' => "Order {$order->order_number} accepted",
         ]);
     }
 
@@ -223,6 +237,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         if (! $tenantId) {
             $this->dispatch('notify', type: 'error', message: 'No tenant account linked.');
+
             return;
         }
 
@@ -238,7 +253,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
                     ->firstOrFail();
 
                 if (! $order->status->canBeCancelled()) {
-                    throw new \RuntimeException('invalid_transition');
+                    throw new RuntimeException('invalid_transition');
                 }
 
                 if ($order->status === OrderStatus::Processing) {
@@ -250,9 +265,9 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 }
 
                 $order->update([
-                    'status'              => OrderStatus::Cancelled,
-                    'processed_by'        => Auth::id(),
-                    'cancelled_at'        => now(),
+                    'status' => OrderStatus::Cancelled,
+                    'processed_by' => Auth::id(),
+                    'cancelled_at' => now(),
                     'cancellation_reason' => $reason,
                 ]);
             });
@@ -268,9 +283,9 @@ new #[Layout('layouts.shop_owner')] class extends Component
                     ? 'Order cancelled. Stock restored.'
                     : 'Order cancelled.'
             );
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             $this->dispatch('notify', type: 'error', message: 'Invalid status change.');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
             $this->dispatch('notify', type: 'error', message: 'Could not cancel order.');
         }
@@ -278,14 +293,18 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
     protected function restoreStockForItem(int $tenantId, $item, Order $order): void
     {
-        if (! $item->product_id) return;
+        if (! $item->product_id) {
+            return;
+        }
 
         $product = Product::where('tenant_id', $tenantId)
             ->whereKey($item->product_id)
             ->lockForUpdate()
             ->first();
 
-        if (! $product) return;
+        if (! $product) {
+            return;
+        }
 
         $qty = (int) $item->quantity;
 
@@ -296,43 +315,45 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 ->lockForUpdate()
                 ->first();
 
-            if (! $variant) return;
+            if (! $variant) {
+                return;
+            }
 
             $before = (int) $variant->stock_quantity;
-            $after  = $before + $qty;
+            $after = $before + $qty;
             $variant->update(['stock_quantity' => $after]);
 
             $product->refresh()->syncStockFromVariants();
 
             Inventory::create([
-                'tenant_id'      => $tenantId,
-                'product_id'     => $product->id,
-                'type'           => 'stock_in',
-                'quantity'       => $qty,
-                'before_stock'   => $before,
-                'after_stock'    => $after,
+                'tenant_id' => $tenantId,
+                'product_id' => $product->id,
+                'type' => 'stock_in',
+                'quantity' => $qty,
+                'before_stock' => $before,
+                'after_stock' => $after,
                 'reference_type' => 'order',
-                'reference_id'   => $order->id,
-                'remarks'        => "Order {$order->order_number} cancelled · variant {$item->variant_label} stock restored",
+                'reference_id' => $order->id,
+                'remarks' => "Order {$order->order_number} cancelled · variant {$item->variant_label} stock restored",
             ]);
 
             return;
         }
 
         $before = (int) $product->stock;
-        $after  = $before + $qty;
+        $after = $before + $qty;
         $product->update(['stock' => $after]);
 
         Inventory::create([
-            'tenant_id'      => $tenantId,
-            'product_id'     => $product->id,
-            'type'           => 'stock_in',
-            'quantity'       => $qty,
-            'before_stock'   => $before,
-            'after_stock'    => $after,
+            'tenant_id' => $tenantId,
+            'product_id' => $product->id,
+            'type' => 'stock_in',
+            'quantity' => $qty,
+            'before_stock' => $before,
+            'after_stock' => $after,
             'reference_type' => 'order',
-            'reference_id'   => $order->id,
-            'remarks'        => "Order {$order->order_number} cancelled · stock restored",
+            'reference_id' => $order->id,
+            'remarks' => "Order {$order->order_number} cancelled · stock restored",
         ]);
     }
 
@@ -346,6 +367,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         if (! $tenantId) {
             $this->dispatch('notify', type: 'error', message: 'No tenant account linked.');
+
             return;
         }
 
@@ -360,55 +382,67 @@ new #[Layout('layouts.shop_owner')] class extends Component
                     ->firstOrFail();
 
                 if (! $order->status->canBeCompleted()) {
-                    throw new \RuntimeException('invalid_transition');
+                    throw new RuntimeException('invalid_transition');
                 }
 
                 $sale = Sale::create([
-                    'tenant_id'      => $order->tenant_id,
-                    'customer_id'    => $order->customer_id,
-                    'served_by'      => null,
+                    'tenant_id' => $order->tenant_id,
+                    'customer_id' => $order->customer_id,
+                    'served_by' => null,
                     'invoice_number' => 'INV-'.now()->format('Ymd').'-'.strtoupper(substr(uniqid(), -6)),
-                    'subtotal'       => $order->subtotal,
-                    'discount'       => $order->discount,
-                    'tax'            => $order->tax,
-                    'final_amount'   => $order->total,
+                    'subtotal' => $order->subtotal,
+                    'discount' => $order->discount,
+                    'tax' => $order->tax,
+                    'final_amount' => $order->total,
                     'payment_method' => $order->payment_method,
-                    'status'         => 'paid',
+                    'status' => 'paid',
                 ]);
 
                 foreach ($order->items as $item) {
                     SaleItem::create([
-                        'sale_id'    => $sale->id,
+                        'sale_id' => $sale->id,
                         'product_id' => $item->product_id,
                         'service_id' => null,
-                        'item_type'  => 'product',
-                        'quantity'   => $item->quantity,
-                        'price'      => $item->unit_price,
-                        'subtotal'   => $item->line_total,
+                        'item_type' => 'product',
+                        'quantity' => $item->quantity,
+                        'price' => $item->unit_price,
+                        'subtotal' => $item->line_total,
                     ]);
                 }
 
-                $order->update([
-                    'status'       => OrderStatus::Completed,
+                // ─── Payment status on completion ─────────────────
+                // Cash on pickup stays as-is (already paid at handover
+                // or still unpaid if the shop chooses to track it manually).
+                // Every other method (bank transfer, GCash, card, Maya) is
+                // considered settled once the shop completes the order.
+                $paymentUpdates = [];
+                if ($order->payment_method !== 'cash_on_pickup') {
+                    $paymentUpdates = [
+                        'payment_status' => 'paid',
+                        'paid_at' => $order->paid_at ?? now(),
+                    ];
+                }
+
+                $order->update(array_merge([
+                    'status' => OrderStatus::Completed,
                     'completed_at' => now(),
                     'processed_by' => Auth::id(),
-                    'sale_id'      => $sale->id,
-                ]);
+                    'sale_id' => $sale->id,
+                ], $paymentUpdates));
             });
 
-            // Notify customer
             $order?->customer?->notify(new OrderStatusChanged($order, 'completed'));
 
             unset($this->orders, $this->counts);
             $this->dispatch('notify', type: 'success', message: 'Order completed. Sale recorded.');
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             $this->dispatch('notify', type: 'error', message: 'Order is not ready to complete.');
-        } catch (\Throwable $e) {
-            \Log::error('ORDER COMPLETE FAILED', [
+        } catch (Throwable $e) {
+            Log::error('ORDER COMPLETE FAILED', [
                 'order_id' => $orderId,
-                'message'  => $e->getMessage(),
-                'file'     => $e->getFile(),
-                'line'     => $e->getLine(),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             $this->dispatch('notify', type: 'error', message: 'Could not complete order.');
         }
@@ -424,11 +458,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         if (! $tenantId) {
             $this->dispatch('notify', type: 'error', message: 'No tenant account linked.');
+
             return;
         }
 
         try {
-            DB::transaction(function () use ($orderId, $tenantId, $to, $reason) {
+            DB::transaction(function () use ($orderId, $tenantId, $to) {
                 $order = Order::query()
                     ->where('tenant_id', $tenantId)
                     ->whereKey($orderId)
@@ -437,24 +472,26 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
                 $allowed = match ($to) {
                     OrderStatus::Ready => $order->status->canBeMarkedReady(),
-                    default            => false,
+                    default => false,
                 };
 
                 if (! $allowed) {
-                    throw new \RuntimeException('invalid_transition');
+                    throw new RuntimeException('invalid_transition');
                 }
 
                 $order->update([
-                    'status'       => $to,
+                    'status' => $to,
                     'processed_by' => Auth::id(),
                 ]);
             });
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             $this->dispatch('notify', type: 'error', message: 'Invalid status change.');
+
             return;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
             $this->dispatch('notify', type: 'error', message: 'Could not update order.');
+
             return;
         }
 

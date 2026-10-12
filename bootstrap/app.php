@@ -16,11 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-        'admin' => AdminMiddleware::class,
-        'customer' => CustomerMiddleware::class,
-        'owner' => ShopOwnerMiddleware::class,
+            'admin' => AdminMiddleware::class,
+            'customer' => CustomerMiddleware::class,
+            'owner' => ShopOwnerMiddleware::class,
+        ]);
 
-
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/paymongo',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -81,7 +81,34 @@
     @else
         <div class="space-y-4">
             @foreach ($orders as $order)
-                @php $badge = $order->status->badge(); @endphp
+                @php
+                    $badge = $order->status->badge();
+
+                    // Payment method label
+                    $paymentLabel = match ($order->payment_method) {
+                        'cash_on_pickup' => 'Cash on pickup',
+                        'bank_transfer'  => 'Bank transfer',
+                        'paymongo_gcash' => 'GCash (online)',
+                        'paymongo_card'  => 'Card (online)',
+                        'paymongo_maya'  => 'Maya (online)',
+                        default          => ucfirst(str_replace('_', ' ', (string) $order->payment_method)),
+                    };
+
+                    // Payment status pill
+                    $payBadge = match ($order->payment_status) {
+                        'paid'     => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+                        'unpaid'   => 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+                        'failed'   => 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
+                        'refunded' => 'bg-slate-100 text-slate-700 dark:bg-gray-700 dark:text-gray-300',
+                        default    => 'bg-slate-100 text-slate-700 dark:bg-gray-700 dark:text-gray-300',
+                    };
+                    $payDot = match ($order->payment_status) {
+                        'paid'   => 'bg-emerald-500',
+                        'unpaid' => 'bg-amber-500',
+                        'failed' => 'bg-red-500',
+                        default  => 'bg-slate-400',
+                    };
+                @endphp
                 <article wire:key="order-{{ $order->id }}"
                          class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
 
@@ -95,6 +122,27 @@
                             <p class="text-xs text-slate-500 dark:text-gray-400">
                                 {{ $order->created_at->format('M d, Y g:i A') }}
                             </p>
+
+                            {{-- Payment info --}}
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-gray-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-gray-300">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                    {{ $paymentLabel }}
+                                </span>
+
+                                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ $payBadge }}">
+                                    <span class="h-1.5 w-1.5 rounded-full {{ $payDot }}"></span>
+                                    {{ $order->payment_status }}
+                                </span>
+
+                                @if ($order->paid_at)
+                                    <span class="text-[10px] text-slate-400 dark:text-gray-500">
+                                        Paid {{ $order->paid_at->format('M d, Y g:i A') }}
+                                    </span>
+                                @endif
+                            </div>
                         </div>
 
                         <div class="flex items-center gap-3">

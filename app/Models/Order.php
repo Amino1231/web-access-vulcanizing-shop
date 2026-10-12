@@ -22,6 +22,12 @@ class Order extends Model
         'tax',
         'total',
         'payment_method',
+        'payment_status',
+        'payment_reference',
+        'payment_provider',
+        'payment_channel',
+        'payment_meta',
+        'paid_at',
         'notes',
         'processed_by',
         'processed_at',
@@ -32,14 +38,16 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'status'       => OrderStatus::class,
-        'processed_at' => 'datetime',
-        'completed_at' => 'datetime',
-        'cancelled_at' => 'datetime',
-        'subtotal'     => 'decimal:2',
-        'discount'     => 'decimal:2',
-        'tax'          => 'decimal:2',
-        'total'        => 'decimal:2',
+        'status'         => OrderStatus::class,
+        'processed_at'   => 'datetime',
+        'completed_at'   => 'datetime',
+        'cancelled_at'   => 'datetime',
+        'paid_at'        => 'datetime',
+        'payment_meta'   => 'array',
+        'subtotal'       => 'decimal:2',
+        'discount'       => 'decimal:2',
+        'tax'            => 'decimal:2',
+        'total'          => 'decimal:2',
     ];
 
     public function tenant(): BelongsTo
@@ -78,4 +86,17 @@ class Order extends Model
     public function scopeCompleted($q)  { return $q->where('status', OrderStatus::Completed->value); }
     public function scopeCancelled($q)  { return $q->where('status', OrderStatus::Cancelled->value); }
     public function scopeActive($q)     { return $q->whereNotIn('status', [OrderStatus::Completed->value, OrderStatus::Cancelled->value]); }
+
+    public function scopeUnpaid($q)     { return $q->where('payment_status', 'unpaid'); }
+    public function scopePaid($q)       { return $q->where('payment_status', 'paid'); }
+
+    public function isPaid(): bool
+    {
+        return $this->payment_status === 'paid';
+    }
+
+    public function isOnlinePayment(): bool
+    {
+        return str_starts_with((string) $this->payment_method, 'paymongo_');
+    }
 }

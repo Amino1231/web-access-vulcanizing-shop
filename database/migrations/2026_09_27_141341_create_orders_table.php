@@ -21,7 +21,16 @@ return new class extends Migration
             $table->decimal('discount', 12, 2)->default(0);
             $table->decimal('tax', 12, 2)->default(0);
             $table->decimal('total', 12, 2);
+
+            // ─── Payment ─────────────────────────────
             $table->string('payment_method')->default('cash_on_pickup');
+            $table->string('payment_status')->default('unpaid');       // unpaid | paid | failed | refunded
+            $table->string('payment_reference')->nullable();            // PayMongo checkout session id (cs_xxx)
+            $table->string('payment_provider')->nullable();             // 'paymongo'
+            $table->string('payment_channel')->nullable();              // 'gcash' | 'card' | 'maya'
+            $table->json('payment_meta')->nullable();                   // raw webhook payload
+            $table->timestamp('paid_at')->nullable();
+
             $table->text('notes')->nullable();
             $table->foreignId('processed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('processed_at')->nullable();
@@ -34,6 +43,8 @@ return new class extends Migration
             $table->index(['tenant_id', 'status']);
             $table->index(['customer_id', 'created_at']);
             $table->index('status');
+            $table->index('payment_status');
+            $table->index('payment_reference');
         });
     }
 

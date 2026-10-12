@@ -94,7 +94,7 @@
                     <article wire:key="post-{{ $post->id }}"
                              class="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition hover:shadow-xl">
 
-                        <a href="{{ route('customer.product_detail', $post->product_id) }}" wire:navigate
+                        <a href="{{ route('customer.product_detail', $post->product_id) }}" 
                            class="relative block overflow-hidden bg-slate-100 dark:bg-gray-800">
                             @if ($post->image)
                                 <img src="{{ asset('storage/' . $post->image) }}" alt="{{ $post->name }}" loading="lazy"
@@ -124,7 +124,7 @@
                                 {{ $post->tenant?->name }}
                             </span>
 
-                            <a href="{{ route('customer.product_detail', $post->product_id) }}" wire:navigate
+                            <a href="{{ route('customer.product_detail', $post->product_id) }}" 
                                class="mt-1 line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white transition hover:text-[#FF5E14]">
                                 {{ $post->name }}
                             </a>

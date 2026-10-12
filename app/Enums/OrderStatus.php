@@ -108,4 +108,38 @@ enum OrderStatus: string
             self::cases()
         );
     }
+
+    // ─────────────────────────────────────────
+    // Payment resolution
+    // ─────────────────────────────────────────
+
+    /**
+     * Payment status to write on an order when it's created.
+     *
+     * Rule:
+     *   - cash_on_pickup  → unpaid (shop collects at handover)
+     *   - everything else → paid   (bank transfer, GCash, Card, Maya)
+     */
+    public static function initialPaymentStatus(string $paymentMethod): string
+    {
+        return $paymentMethod === 'cash_on_pickup' ? 'unpaid' : 'paid';
+    }
+
+    /**
+     * Payment status an existing order should end up with when the shop
+     * completes it. Never downgrades an order that's already paid.
+     *
+     * Rule:
+     *   - already paid       → keep paid
+     *   - cash_on_pickup     → keep current (shop handles manually)
+     *   - everything else    → paid
+     */
+    public function resolvedPaymentStatusOnCompletion(string $paymentMethod, string $currentStatus): string
+    {
+        if ($currentStatus === 'paid') {
+            return 'paid';
+        }
+
+        return $paymentMethod === 'cash_on_pickup' ? $currentStatus : 'paid';
+    }
 }

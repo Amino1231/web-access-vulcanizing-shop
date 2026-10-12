@@ -99,11 +99,17 @@
                             <label class="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                                 Payment method
                             </label>
-                            <select wire:model="payment_method"
+                            <select wire:model.live="payment_method"
                                     class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-500/20">
-                                <option value="cash_on_pickup">Cash on pickup</option>
-                                <option value="gcash">GCash</option>
-                                <option value="bank_transfer">Bank transfer</option>
+                                <optgroup label="Pay later">
+                                    <option value="cash_on_pickup">Cash on pickup</option>
+                                    <option value="bank_transfer">Bank transfer</option>
+                                </optgroup>
+                                <optgroup label="Pay now">
+                                    <option value="paymongo_gcash">GCash (pay now)</option>
+                                    <option value="paymongo_card">Card (pay now)</option>
+                                    <option value="paymongo_maya">Maya (pay now)</option>
+                                </optgroup>
                             </select>
                         </div>
 
@@ -173,14 +179,15 @@
                                 @disabled($totals['count'] === 0)
                                 class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF5E14] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition hover:bg-[#D94E10] disabled:cursor-not-allowed disabled:opacity-50">
                             <span wire:loading.remove wire:target="placeOrder">
-                                Place order {{ $totals['count'] > 0 ? '(' . $totals['count'] . ')' : '' }}
+                                {{ str_starts_with($payment_method, 'paymongo_') ? 'Pay now' : 'Place order' }}
+                                {{ $totals['count'] > 0 ? '(' . $totals['count'] . ')' : '' }}
                             </span>
                             <span wire:loading wire:target="placeOrder" class="flex items-center gap-2">
                                 <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                 </svg>
-                                Placing order…
+                                {{ str_starts_with($payment_method, 'paymongo_') ? 'Redirecting…' : 'Placing order…' }}
                             </span>
                         </button>
                     </div>

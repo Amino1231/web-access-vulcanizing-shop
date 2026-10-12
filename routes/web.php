@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CustomerReceiptController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,23 @@ Route::prefix('customer')->middleware(['customer'])->group(function () {
     Route::livewire('/product/{product}', 'pages::customer.product-details')->name('customer.product_detail');
     Route::livewire('/checkout', 'pages::customer.order-checkout')->name('customer.checkout');
     Route::livewire('/orders', 'pages::customer.order-history')->name('customer.orders');
+
+    Route::get('/checkout/success/{order}', function (\App\Models\Order $order) {
+        abort_unless($order->customer_id === auth()->id(), 403);
+
+        return redirect()->route('customer.orders')
+            ->with('success', "Payment for order #{$order->order_number} received. Your order is being processed.");
+    })->name('customer.checkout.success');
+
+    Route::get('/checkout/cancel/{order}', function (\App\Models\Order $order) {
+        abort_unless($order->customer_id === auth()->id(), 403);
+
+        return redirect()->route('customer.orders')
+            ->with('warning', "Payment for order #{$order->order_number} was cancelled. You can pay again from the order page.");
+    })->name('customer.checkout.cancel');
+
+    Route::livewire('/orders/{order}/receipt', 'pages::customer.order-receipt')->name('customer.order_receipt');
+
     Route::livewire('/new-arrivals', 'pages::customer.new-arrival')->name('customer.new_arrivals');
 
     Route::livewire('/services', 'pages::customer.services')->name('customer.services.index');
@@ -36,6 +54,8 @@ Route::prefix('customer')->middleware(['customer'])->group(function () {
     Route::livewire('/appointments/{appointment}', 'pages::customer.appointment-detail')->name('customer.appointment_detail');
 
     Route::livewire('/map', 'pages::customer.map.live')->name('customer.map');
+
+    Route::get('/customer/orders/{order}/receipt/pdf', CustomerReceiptController::class)->name('customer.order_receipt.pdf');
 
 });
 
@@ -86,5 +106,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::livewire('/shops', 'pages::admin.approved-shop-table')->name('admin.shops.index');
 });
 
+Route::post('/webhooks/paymongo', [\App\Http\Controllers\PayMongoWebhookController::class, 'handle'])
+    ->name('webhooks.paymongo')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 Broadcast::routes();
