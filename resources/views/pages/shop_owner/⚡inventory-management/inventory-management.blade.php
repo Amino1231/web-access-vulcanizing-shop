@@ -19,14 +19,39 @@
         </template>
     </div>
 
+    {{-- ═══════════════════════════════════════════════════ --}}
     {{-- Header --}}
+    {{-- ═══════════════════════════════════════════════════ --}}
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400">Owner portal</p>
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Inventory</h1>
-            <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
-                Track stock movements, adjust manually, and audit every change.
+            <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400">
+                Owner portal
             </p>
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Product inventory
+            </h1>
+            <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
+                Track stock movements for your physical products only.
+            </p>
+
+            {{-- Scope clarification --}}
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 text-[11px] font-medium text-blue-700 dark:text-blue-300">
+                    <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path stroke-linecap="round" d="M12 16v-4M12 8h.01" />
+                    </svg>
+                    Inventory is for <strong>products</strong>, not services
+                </span>
+
+                <a href="{{ route('owner.appointments') }}" wire:navigate
+                   class="inline-flex items-center gap-1.5 rounded-full bg-orange-50 dark:bg-orange-500/10 px-2.5 py-1 text-[11px] font-semibold text-[#FF5E14] transition hover:bg-orange-100 dark:hover:bg-orange-500/20">
+                    <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Manage services →
+                </a>
+            </div>
         </div>
 
         <div class="flex items-center gap-2">
@@ -36,7 +61,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
                 New product
-            </button>
             </a>
 
             <button wire:click="openAdjustModal" type="button"
@@ -54,7 +78,9 @@
             No business data is available yet. Complete the business setup to populate dashboard metrics.
         </div>
     @else
+        {{-- ═══════════════════════════════════════════════════ --}}
         {{-- KPIs --}}
+        {{-- ═══════════════════════════════════════════════════ --}}
         <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             @foreach ($kpis as $kpi)
                 @php
@@ -75,13 +101,15 @@
             @endforeach
         </section>
 
+        {{-- ═══════════════════════════════════════════════════ --}}
         {{-- Charts --}}
+        {{-- ═══════════════════════════════════════════════════ --}}
         <section class="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
             <article class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
                         <p class="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">Movement</p>
-                        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Net inventory change</h2>
+                        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Net product stock change</h2>
                     </div>
                     <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-gray-400">
                         <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#FF5E14]"></span>
@@ -96,7 +124,7 @@
             <article class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
                 <div class="mb-4">
                     <p class="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">Snapshot</p>
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Stock status</h2>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Product stock status</h2>
                 </div>
                 <div class="flex flex-col items-center justify-center gap-4">
                     <canvas id="ownerDonutChart" width="190" height="190"></canvas>
@@ -115,17 +143,22 @@
             </article>
         </section>
 
+        {{-- ═══════════════════════════════════════════════════ --}}
         {{-- Inventory log --}}
+        {{-- ═══════════════════════════════════════════════════ --}}
         <section class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
             <div class="border-b border-slate-200 dark:border-gray-800 px-5 py-4">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">Audit log</p>
-                        <h2 class="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white">Stock movement history</h2>
+                        <h2 class="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white">Product stock movement history</h2>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-gray-400">
+                            Every stock adjustment, order fulfillment, and cancellation is recorded here.
+                        </p>
                     </div>
 
                     @php $logs = $this->logs; @endphp
-                    <div class="text-xs text-slate-500 dark:text-gray-400">
+                    <div class="shrink-0 text-xs text-slate-500 dark:text-gray-400">
                         {{ number_format($logs->total()) }} {{ \Illuminate\Support\Str::plural('entry', $logs->total()) }}
                     </div>
                 </div>
@@ -241,9 +274,12 @@
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                               d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
-                                    <p class="mt-3 text-sm font-medium text-slate-700 dark:text-gray-300">No inventory activity</p>
+                                    <p class="mt-3 text-sm font-medium text-slate-700 dark:text-gray-300">No product inventory activity</p>
                                     <p class="mt-1 text-xs text-slate-500 dark:text-gray-400">
                                         Try a different filter, or click <strong class="text-slate-700 dark:text-gray-200">Adjust stock</strong> above.
+                                    </p>
+                                    <p class="mt-3 text-[11px] text-slate-400 dark:text-gray-500 italic">
+                                        Services are managed from the <a href="{{ route('owner.appointments') }}" wire:navigate class="text-[#FF5E14] hover:underline not-italic">Appointments</a> page, not here.
                                     </p>
                                 </td>
                             </tr>
@@ -280,10 +316,13 @@
                 <div class="flex items-center justify-between gap-4 border-b border-slate-200 dark:border-gray-800 px-6 py-5">
                     <div>
                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Manual adjustment</p>
-                        <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">Adjust stock</h3>
+                        <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">Adjust product stock</h3>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-gray-400">
+                            Only physical products are inventoried. Services aren't adjusted here.
+                        </p>
                     </div>
                     <button wire:click="closeAdjustModal" type="button"
-                            class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:bg-gray-800">
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:bg-gray-800">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -303,6 +342,9 @@
                             <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
                                 Pick a product <span class="text-red-500">*</span>
                             </label>
+                            <p class="mb-2 text-[11px] text-slate-500 dark:text-gray-400">
+                                Only products appear below — services aren't inventory-tracked.
+                            </p>
                             <input wire:model.live.debounce.300ms="productSearch" type="text"
                                    placeholder="Search by product name or SKU..."
                                    class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-orange-100" />
@@ -456,7 +498,7 @@
                                 Reason <span class="text-red-500">*</span>
                             </label>
                             <input wire:model="adjustReason" type="text"
-                                   placeholder="e.g. Supplier delivery, Damaged, Return"
+                                   placeholder="e.g. Supplier delivery, Damaged, Return, Physical count correction"
                                    class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-orange-100" />
                             @error('adjustReason')
                                 <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
@@ -627,7 +669,7 @@
 
             ctx.font = '10px sans-serif';
             ctx.fillStyle = isDark ? '#9ca3af' : '#64748b';
-            ctx.fillText('ITEMS', cx, cy + 18);
+            ctx.fillText('PRODUCTS', cx, cy + 18);
         }
     }
 </script>

@@ -12,6 +12,22 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+/**
+ * Product Inventory Management
+ * ============================
+ *
+ * SCOPE: This component ONLY tracks stock for **Products** (physical goods
+ * with quantity on hand). Services are intentionally NOT included here —
+ * they're managed via:
+ *   - Service catalog:  owner.categories / owner.products
+ *   - Scheduling:       owner.appointments / owner.employees.schedule
+ *   - Capacity:         employee schedules + appointment slots
+ *
+ * WHY: Products have finite stock (units). Services have temporal capacity
+ * (time slots). Mixing them in one inventory system creates confusion and
+ * bad reports. This separation is intentional and aligns with the
+ * recommendation to treat Product and Service inventory as DIFFERENT.
+ */
 new #[Layout('layouts.shop_owner')] class extends Component
 {
     use WithPagination;
@@ -83,13 +99,13 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->sum('final_amount');
 
         $this->kpis = [
-            ['label' => 'Products',    'value' => (string) $totalProducts,                              'delta' => 'Catalog',                  'tone' => 'orange', 'filter' => ''],
-            ['label' => 'Stock units', 'value' => (string) $totalStock,                                 'delta' => 'On hand',                  'tone' => 'green',  'filter' => ''],
-            ['label' => 'Low stock',   'value' => (string) $lowStockCount,                              'delta' => $lowStockCount > 0 ? 'Attention' : 'All good', 'tone' => $lowStockCount > 0 ? 'amber' : 'green', 'filter' => 'low'],
-            ['label' => 'Sales total', 'value' => '₱' . number_format($salesTotal, 2),                  'delta' => 'Revenue',                  'tone' => 'green',  'filter' => ''],
+            ['label' => 'Product items', 'value' => (string) $totalProducts, 'delta' => 'Catalog', 'tone' => 'orange', 'filter' => ''],
+            ['label' => 'Stock units',   'value' => (string) $totalStock,    'delta' => 'On hand', 'tone' => 'green',  'filter' => ''],
+            ['label' => 'Low stock',     'value' => (string) $lowStockCount, 'delta' => $lowStockCount > 0 ? 'Attention' : 'All good', 'tone' => $lowStockCount > 0 ? 'amber' : 'green', 'filter' => 'low'],
+            ['label' => 'Sales total',   'value' => '₱' . number_format($salesTotal, 2), 'delta' => 'Revenue', 'tone' => 'green', 'filter' => ''],
         ];
 
-        // Line chart — 6-month net inventory movement
+        // Line chart — 6-month net inventory movement (products only)
         $labels = [];
         $series = [];
         for ($i = 5; $i >= 0; $i--) {

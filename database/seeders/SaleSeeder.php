@@ -20,6 +20,9 @@ class SaleSeeder extends Seeder
             $products = Product::where('tenant_id', $tenant->id)->take(3)->get();
             $services = Service::where('tenant_id', $tenant->id)->take(2)->get();
 
+            // Resolve commission rate for this shop (defaults to 10%)
+            $commissionRate = $tenant->commissionRate();
+
             for ($i = 0; $i < 5; $i++) {
                 $createdAt = now()->subMonths(rand(0, 5))->subDays(rand(1, 20));
                 $customer  = $customers->random();
@@ -60,6 +63,10 @@ class SaleSeeder extends Seeder
                 $tax      = 0;
                 $total    = $subtotal - $discount + $tax;
 
+                // ─── Commission split ───────────────────
+                $platformCommission = round($total * ($commissionRate / 100), 2);
+                $shopNetRevenue     = round($total - $platformCommission, 2);
+
                 $sale = Sale::updateOrCreate(
                     ['invoice_number' => 'INV-SEED-' . $tenant->id . '-' . $i],
                     [
@@ -69,6 +76,12 @@ class SaleSeeder extends Seeder
                         'discount'       => $discount,
                         'tax'            => $tax,
                         'final_amount'   => $total,
+
+                        // ─── Commission columns ────
+                        'platform_commission'      => $platformCommission,
+                        'shop_net_revenue'         => $shopNetRevenue,
+                        'commission_rate_applied'  => $commissionRate,
+
                         'payment_method' => collect(['cash', 'gcash', 'card'])->random(),
                         'status'         => 'paid',
                         'created_at'     => $createdAt,
@@ -76,6 +89,7 @@ class SaleSeeder extends Seeder
                     ]
                 );
 
+                // Recreate sale items
                 $sale->items()->delete();
 
                 foreach ($lineItems as $li) {

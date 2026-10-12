@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('logo')->nullable();
             $table->boolean('is_active')->default(false);
             $table->boolean('business_setup_completed')->default(false);
+            $table->decimal('commission_rate', 5, 2)->default(10.00);
             $table->json('business_hours')->nullable();
             $table->json('attachment')->nullable();
             $table->decimal('latitude', 10, 8)->nullable();

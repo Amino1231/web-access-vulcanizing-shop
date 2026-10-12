@@ -19,6 +19,9 @@ class Sale extends Model
         'discount',
         'tax',
         'final_amount',
+        'platform_commission',
+        'shop_net_revenue',
+        'commission_rate_applied',
         'payment_method',
         'status',
     ];
@@ -28,6 +31,9 @@ class Sale extends Model
         'discount'     => 'decimal:2',
         'tax'          => 'decimal:2',
         'final_amount' => 'decimal:2',
+        'platform_commission'     => 'decimal:2',
+        'shop_net_revenue'        => 'decimal:2',
+        'commission_rate_applied' => 'decimal:2',
     ];
 
     public function tenant(): BelongsTo
@@ -68,5 +74,37 @@ class Sale extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    // ─────────────────────────────────────────
+    // Commission helpers
+    // ─────────────────────────────────────────
+
+    /**
+     * Calculate and apply platform commission on this sale.
+     * Call BEFORE save() on a new Sale instance.
+     *
+     * @param  float  $rate  Commission % (0-100). e.g. 10.00 for 10%.
+     */
+    public function applyCommission(float $rate): self
+    {
+        // Clamp rate to a valid 0–100 range
+        $rate = max(0.0, min(100.0, $rate));
+
+        $finalAmount = (float) $this->final_amount;
+
+        $this->commission_rate_applied = $rate;
+        $this->platform_commission     = round($finalAmount * ($rate / 100), 2);
+        $this->shop_net_revenue        = round($finalAmount - $this->platform_commission, 2);
+
+        return $this;
+    }
+
+    /**
+     * Convenience: does this sale have a commission applied?
+     */
+    public function hasCommission(): bool
+    {
+        return (float) $this->platform_commission > 0;
     }
 }

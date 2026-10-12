@@ -6,10 +6,12 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\Tenant;
 use App\Models\Variant;
 use App\Notifications\OrderStatusChanged;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -358,7 +360,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
     }
 
     // ─────────────────────────────────────────
-    // Complete → creates sale + notifies customer
+    // Complete → creates sale with platform commission + notifies customer
     // ─────────────────────────────────────────
 
     public function complete(int $orderId): void
@@ -385,7 +387,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
                     throw new RuntimeException('invalid_transition');
                 }
 
-                $sale = Sale::create([
+                // ─── Resolve the shop's commission rate ───
+                $tenant = Tenant::find($order->tenant_id);
+                $rate   = $tenant?->commissionRate() ?? 10.00;
+
+                // ─── Create the sale ───
+                $sale = new Sale([
                     'tenant_id' => $order->tenant_id,
                     'customer_id' => $order->customer_id,
                     'served_by' => null,
@@ -397,6 +404,10 @@ new #[Layout('layouts.shop_owner')] class extends Component
                     'payment_method' => $order->payment_method,
                     'status' => 'paid',
                 ]);
+
+                // ─── Apply platform commission split ───
+                $sale->applyCommission($rate);
+                $sale->save();
 
                 foreach ($order->items as $item) {
                     SaleItem::create([
@@ -434,7 +445,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
             $order?->customer?->notify(new OrderStatusChanged($order, 'completed'));
 
             unset($this->orders, $this->counts);
-            $this->dispatch('notify', type: 'success', message: 'Order completed. Sale recorded.');
+            $this->dispatch('notify', type: 'success', message: 'Order completed. Sale recorded with commission split.');
         } catch (RuntimeException $e) {
             $this->dispatch('notify', type: 'error', message: 'Order is not ready to complete.');
         } catch (Throwable $e) {

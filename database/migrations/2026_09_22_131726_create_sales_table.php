@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('sales', function (Blueprint $table) {
@@ -23,15 +20,18 @@ return new class extends Migration
             $table->decimal('discount', 12, 2)->default(0);
             $table->decimal('tax', 12, 2)->default(0);
             $table->decimal('final_amount', 12, 2);
+
+            // ─── Commission split ────────────────
+            $table->decimal('platform_commission', 12, 2)->default(0);
+            $table->decimal('shop_net_revenue', 12, 2)->default(0);
+            $table->decimal('commission_rate_applied', 5, 2)->default(0);
+
             $table->string('payment_method');
             $table->string('status');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('sales');

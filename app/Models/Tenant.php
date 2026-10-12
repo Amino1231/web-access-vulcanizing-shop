@@ -20,6 +20,7 @@ class Tenant extends Model
         'logo',
         'is_active',
         'business_setup_completed',
+        'commission_rate',
         'business_hours',
         'attachment',
         'latitude',
@@ -39,6 +40,7 @@ class Tenant extends Model
         'missing_requirements' => 'array',
         'submitted_at' => 'datetime',
         'approved_at' => 'datetime',
+        'commission_rate' => 'decimal:2',
     ];
 
     // ─── Owner & members ────────────────────────
@@ -239,5 +241,16 @@ class Tenant extends Model
             'inactive' => 'Offline',
             default => 'Unknown',
         };
+    }
+
+    // ─── Commission ─────────────────────────────
+
+    /**
+     * Effective commission rate as a float (0–100).
+     * Falls back to 10.00 if the column is somehow null.
+     */
+    public function commissionRate(): float
+    {
+        return (float) ($this->commission_rate ?? 10.00);
     }
 }
