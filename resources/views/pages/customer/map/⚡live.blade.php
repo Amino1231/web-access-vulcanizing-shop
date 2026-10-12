@@ -419,11 +419,12 @@ new #[Layout('layouts.customer')] class extends Component
 
 ?>
 
-<div class="bg-gray-50 dark:bg-gray-950 min-h-screen">
+<div class="lm-root bg-gray-50 dark:bg-gray-950 min-h-screen">
 
     <style>
         header.sticky { z-index: 1000 !important; }
 
+        /* ───────── Leaflet stacking ───────── */
         #live-map.leaflet-container {
             z-index: 0 !important;
             isolation: isolate;
@@ -437,23 +438,135 @@ new #[Layout('layouts.customer')] class extends Component
         #live-map .leaflet-bottom       { z-index: 500 !important; }
         #live-map .leaflet-control      { z-index: 500 !important; }
 
+        /* ───────── Responsive layout (plain CSS: no Tailwind rebuild needed) ───────── */
+        .lm-root { overflow-x: clip; }
+
+        .lm-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 1rem;
+        }
+        .lm-grid > * { min-width: 0; }
+
+        .lm-map-wrap { position: relative; min-width: 0; }
+
+        #live-map {
+            width: 100%;
+            height: 60vh;              /* fallback */
+            height: 60dvh;
+            min-height: 320px;
+            max-height: 560px;
+        }
+
+        /* Floating buttons sit above Leaflet's attribution strip */
+        .lm-fab,
+        .lm-locate {
+            position: absolute;
+            bottom: 2rem;
+            z-index: 600;
+        }
+        .lm-fab    { left: .75rem; }
+        .lm-locate { right: .75rem; }
+
+        @media (min-width: 640px) {
+            .lm-grid   { gap: 1.5rem; }
+            #live-map  { height: 460px; max-height: none; }
+            .lm-fab    { left: 1rem; }
+            .lm-locate { right: 1rem; }
+        }
+        @media (min-width: 768px)  { #live-map { height: 540px; } }
+        @media (min-width: 1024px) {
+            .lm-grid  { grid-template-columns: minmax(0, 1fr) 360px; }
+            #live-map { height: 600px; }
+        }
+        @media (min-width: 1280px) { #live-map { height: 640px; } }
+
+        /* Popups never wider than the screen */
+        #live-map .leaflet-popup-content-wrapper { max-width: min(260px, 72vw); }
+        #live-map .leaflet-popup-content { margin: 12px 14px; overflow-wrap: anywhere; }
+
+        /* ───────── Roadside modal (teleported to <body>) ───────── */
+        .rs-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: flex-end;          /* bottom sheet on phones */
+            justify-content: center;
+            overflow: hidden;
+            padding: 0;
+            background: rgba(15, 23, 42, .7);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        .rs-panel {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 100%;
+            max-height: 92vh;               /* fallback */
+            max-height: 92dvh;
+            overflow: hidden;
+            border-radius: 1rem 1rem 0 0;
+        }
+        .rs-head { flex: 0 0 auto; }
+        .rs-body {
+            flex: 1 1 auto;
+            min-height: 0;                  /* lets only the form scroll */
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+        .rs-foot {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: .5rem;
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+        .rs-foot button { width: 100%; }
+
+        /* 16px inputs on phones so iOS doesn't zoom the page on focus */
+        .rs-panel select,
+        .rs-panel textarea,
+        .rs-panel input[type="text"] { font-size: 16px; }
+        .rs-panel textarea { resize: none; }
+
+        @media (min-width: 640px) {
+            .rs-overlay { align-items: center; padding: 1.5rem; }
+            .rs-panel   { max-width: 32rem; max-height: 90vh; max-height: 90dvh; border-radius: 1rem; }
+            .rs-foot    { flex-direction: row; justify-content: flex-end; align-items: center; gap: .75rem; }
+            .rs-foot button { width: auto; }
+            .rs-panel select,
+            .rs-panel textarea,
+            .rs-panel input[type="text"] { font-size: .875rem; }
+        }
+
+        /* ───────── Animations ───────── */
         @keyframes user-pulse {
             0%   { transform: scale(1);   opacity: 0.6; }
             70%  { transform: scale(2.5); opacity: 0;   }
             100% { transform: scale(2.5); opacity: 0;   }
         }
         .user-pulse-ring { animation: user-pulse 2s ease-out infinite; }
+
+        @keyframes marker-pulse {
+            0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+            70%  { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+            100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+        }
+        .marker-pulse { animation: marker-pulse 1.6s ease-out infinite; }
     </style>
 
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         {{-- Header --}}
-        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+        <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0">
                 <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400">
                     Live view
                 </p>
-                <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                <h1 class="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                     Shop &amp; roadside map
                 </h1>
 
@@ -473,9 +586,9 @@ new #[Layout('layouts.customer')] class extends Component
                 @endif
             </div>
 
-            <div class="flex flex-col items-end gap-2">
+            <div class="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-end gap-2 sm:gap-3">
 
-                {{-- Live PH clock (client-side ticker) --}}
+                {{-- Live PH clock --}}
                 <div x-data="{
                         time: '',
                         date: '',
@@ -487,16 +600,16 @@ new #[Layout('layouts.customer')] class extends Component
                         }
                      }"
                      x-init="tick(); setInterval(() => tick(), 1000)"
-                     class="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 shadow-sm">
+                     class="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3.5 sm:px-4 py-2.5 shadow-sm">
                     <div class="relative flex h-2.5 w-2.5">
                         <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#FF5E14] opacity-75"></span>
                         <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#FF5E14]"></span>
                     </div>
-                    <div class="text-right">
-                        <p class="font-mono text-lg font-bold leading-tight tracking-tight text-slate-900 dark:text-white" x-text="time"></p>
+                    <div class="text-left sm:text-right flex-1">
+                        <p class="font-mono text-base sm:text-lg font-bold leading-tight tracking-tight text-slate-900 dark:text-white" x-text="time"></p>
                         <p class="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500 dark:text-gray-400" x-text="date + ' · PHT'"></p>
                     </div>
-                    <svg class="h-5 w-5 text-[#FF5E14]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg class="h-5 w-5 text-[#FF5E14] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="9" />
                         <path stroke-linecap="round" d="M12 7v5l3 2" />
                     </svg>
@@ -505,7 +618,7 @@ new #[Layout('layouts.customer')] class extends Component
                 {{-- Use my location --}}
                 @if ($userLat === null)
                     <button type="button" @click="document.getElementById('locate-trigger')?.click()"
-                            class="inline-flex items-center gap-2 rounded-xl bg-[#FF5E14] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-orange-500/30 transition hover:bg-[#D94E10]">
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF5E14] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-orange-500/30 transition hover:bg-[#D94E10]">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="3" />
                             <circle cx="12" cy="12" r="9" />
@@ -536,15 +649,15 @@ new #[Layout('layouts.customer')] class extends Component
         @enderror
 
         {{-- Layer toggles --}}
-        <div class="mb-4 flex flex-wrap items-center gap-3">
-            <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2.5 text-sm font-medium text-slate-700 dark:text-gray-200 cursor-pointer">
+        <div class="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+            <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-gray-200 cursor-pointer">
                 <input type="checkbox" wire:click="toggleShops" @checked($showShops)
                        class="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500" />
                 <span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
                 Shops
             </label>
 
-            <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2.5 text-sm font-medium text-slate-700 dark:text-gray-200 cursor-pointer">
+            <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-gray-200 cursor-pointer">
                 <input type="checkbox" wire:click="toggleRequests" @checked($showRequests)
                        class="h-4 w-4 rounded border-slate-300 text-red-500 focus:ring-red-500" />
                 <span class="inline-block h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"></span>
@@ -552,7 +665,7 @@ new #[Layout('layouts.customer')] class extends Component
             </label>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div class="lm-grid">
 
             {{-- MAP --}}
             <div
@@ -565,40 +678,40 @@ new #[Layout('layouts.customer')] class extends Component
                 })"
                 @map:update.window="updateData($event.detail)"
                 @map:center.window="centerOn($event.detail)"
-                class="relative rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm"
+                class="lm-map-wrap rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm"
             >
-                <div id="live-map" class="h-[500px] sm:h-[600px] w-full"></div>
+                <div id="live-map"></div>
 
                 {{-- Live pill --}}
-                <div class="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur border border-slate-200 dark:border-gray-700 px-3 py-1.5 shadow-sm">
+                <div class="absolute right-3 top-3 sm:right-4 sm:top-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur border border-slate-200 dark:border-gray-700 px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm" style="z-index: 600;">
                     <span class="relative flex h-2 w-2">
                         <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
                         <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                     </span>
-                    <span class="text-xs font-semibold text-slate-700 dark:text-gray-200">Live</span>
+                    <span class="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-gray-200">Live</span>
                 </div>
 
                 {{-- Request roadside help FAB --}}
                 @auth
                 <button type="button"
                         @click="requestRoadside()"
-                        class="absolute bottom-4 left-4 z-10 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/30 transition hover:bg-red-700"
+                        class="lm-fab inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-red-600 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-red-500/30 transition hover:bg-red-700"
                         :class="locating && 'opacity-60 cursor-not-allowed'">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
                               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <span x-show="!locating">Request roadside help</span>
-                    <span x-show="locating" x-cloak>Getting your location…</span>
+                    <span x-show="!locating">Roadside help</span>
+                    <span x-show="locating" x-cloak>Getting location…</span>
                 </button>
                 @endauth
 
                 {{-- Locate button --}}
                 <button type="button" id="locate-trigger" @click="locateMe()"
-                        class="absolute bottom-4 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 shadow-lg text-slate-700 dark:text-gray-200 transition hover:bg-slate-50 dark:hover:bg-gray-800"
+                        class="lm-locate flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 shadow-lg text-slate-700 dark:text-gray-200 transition hover:bg-slate-50 dark:hover:bg-gray-800"
                         :class="locating && 'animate-pulse'"
                         title="Center on my location">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="3" />
                         <circle cx="12" cy="12" r="9" />
                         <path stroke-linecap="round" d="M12 3v2m0 14v2M3 12h2m14 0h2" />
@@ -611,7 +724,7 @@ new #[Layout('layouts.customer')] class extends Component
                 @if ($selectedTenantId)
                     @php $shop = collect($this->shops)->firstWhere('id', $selectedTenantId); @endphp
                     @if ($shop)
-                        <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+                        <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5">
                             <div class="flex items-start justify-between gap-2 mb-3">
                                 <div class="min-w-0">
                                     <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">Shop</p>
@@ -643,14 +756,14 @@ new #[Layout('layouts.customer')] class extends Component
                                     </div>
                                 @endif
                                 @if ($shop['address'])
-                                    <p class="text-slate-600 dark:text-gray-400">{{ $shop['address'] }}</p>
+                                    <p class="text-slate-600 dark:text-gray-400 break-words">{{ $shop['address'] }}</p>
                                 @endif
                                 @if ($shop['phone'])
-                                    <p class="text-slate-600 dark:text-gray-400">{{ $shop['phone'] }}</p>
+                                    <p class="text-slate-600 dark:text-gray-400 break-words">{{ $shop['phone'] }}</p>
                                 @endif
                             </div>
 
-                            <div class="mt-4 flex gap-2">
+                            <div class="mt-4 flex flex-col sm:flex-row gap-2">
                                 <button type="button" wire:click="centerOn({{ $shop['lat'] }}, {{ $shop['lng'] }}, 16)"
                                         class="flex-1 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-gray-200 hover:bg-slate-50">
                                     Zoom in
@@ -665,7 +778,7 @@ new #[Layout('layouts.customer')] class extends Component
                 @elseif ($selectedRequestId)
                     @php $req = collect($this->roadsideRequests)->firstWhere('id', $selectedRequestId); @endphp
                     @if ($req)
-                        <div class="rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-5">
+                        <div class="rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-4 sm:p-5">
                             <div class="flex items-start justify-between gap-2 mb-3">
                                 <div class="min-w-0">
                                     <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-red-600 dark:text-red-400">Roadside request</p>
@@ -699,7 +812,7 @@ new #[Layout('layouts.customer')] class extends Component
                                     <p class="text-slate-600 dark:text-gray-400">Vehicle: {{ $req['vehicle'] }}</p>
                                 @endif
                                 @if ($req['address'])
-                                    <p class="text-slate-600 dark:text-gray-400">{{ $req['address'] }}</p>
+                                    <p class="text-slate-600 dark:text-gray-400 break-words">{{ $req['address'] }}</p>
                                 @endif
                                 <p class="text-xs text-slate-500 dark:text-gray-500">Requested {{ $req['created_at'] }}</p>
                             </div>
@@ -712,8 +825,8 @@ new #[Layout('layouts.customer')] class extends Component
                     @endif
                 @else
                     {{-- List view --}}
-                    <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-                        <div class="mb-3 flex items-center justify-between">
+                    <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5">
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <h2 class="text-sm font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">
                                 Nearby shops
                             </h2>
@@ -723,7 +836,7 @@ new #[Layout('layouts.customer')] class extends Component
                                 </span>
                             @endif
                         </div>
-                        <div class="space-y-2 max-h-[280px] overflow-y-auto">
+                        <div class="space-y-2 max-h-[280px] sm:max-h-[360px] lg:max-h-[520px] overflow-y-auto -mx-1 px-1">
                             @forelse ($this->shops as $index => $shop)
                                 <button type="button"
                                         wire:click="selectTenant({{ $shop['id'] }}); centerOn({{ $shop['lat'] }}, {{ $shop['lng'] }}, 15)"
@@ -765,11 +878,11 @@ new #[Layout('layouts.customer')] class extends Component
                     </div>
 
                     @if (count($this->roadsideRequests) > 0)
-                        <div class="rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-5">
+                        <div class="rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-4 sm:p-5">
                             <h2 class="text-sm font-bold uppercase tracking-[0.18em] text-red-600 dark:text-red-400 mb-3">
                                 Active requests
                             </h2>
-                            <div class="space-y-2 max-h-[220px] overflow-y-auto">
+                            <div class="space-y-2 max-h-[220px] overflow-y-auto -mx-1 px-1">
                                 @foreach ($this->roadsideRequests as $req)
                                     <button type="button"
                                             wire:click="selectRequest({{ $req['id'] }}); centerOn({{ $req['lat'] }}, {{ $req['lng'] }}, 16)"
@@ -794,137 +907,143 @@ new #[Layout('layouts.customer')] class extends Component
     </div>
 
     {{-- ═══════════════════════════════════════════════════ --}}
-    {{-- Roadside request modal --}}
+    {{-- Roadside request modal — teleported to <body> --}}
     {{-- ═══════════════════════════════════════════════════ --}}
     @if ($showRoadsideModal)
-    @php $assignedShop = $this->nearestOpenShopForRoadside; @endphp
-    <div x-data @keydown.escape.window="$wire.closeRoadsideModal()"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6 backdrop-blur-sm">
+        @teleport('body')
+            @php $assignedShop = $this->nearestOpenShopForRoadside; @endphp
+            <div x-data="{
+                    init() { document.body.style.overflow = 'hidden' },
+                    destroy() { document.body.style.overflow = '' }
+                }"
+                @keydown.escape.window="$wire.closeRoadsideModal()"
+                class="rs-overlay">
 
-        <div class="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl">
+                <div class="rs-panel border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl">
 
-            {{-- Header --}}
-            <div class="flex items-start gap-4 border-b border-slate-200 dark:border-gray-800 px-6 py-5">
-                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20">
-                    <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                </div>
-                <div class="min-w-0 flex-1">
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Request roadside help</h3>
-                    <p class="mt-1 text-sm text-slate-600 dark:text-gray-400">
-                        We'll send this to the nearest open shop.
-                    </p>
-                </div>
-                <button wire:click="closeRoadsideModal" type="button"
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:bg-gray-800">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
+                    {{-- Header --}}
+                    <div class="rs-head flex items-start gap-3 sm:gap-4 border-b border-slate-200 dark:border-gray-800 px-4 sm:px-6 py-4 sm:py-5">
+                        <div class="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20">
+                            <svg class="h-5 w-5 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Request roadside help</h3>
+                            <p class="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-600 dark:text-gray-400">
+                                We'll send this to the nearest open shop.
+                            </p>
+                        </div>
+                        <button wire:click="closeRoadsideModal" type="button"
+                                class="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:bg-gray-800">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
 
-            {{-- Body --}}
-            <div class="overflow-y-auto p-6 space-y-5">
+                    {{-- Body --}}
+                    <div class="rs-body px-4 sm:px-6 py-5 sm:py-6 space-y-4 sm:space-y-5">
 
-                {{-- Assigned shop --}}
-                @if ($assignedShop)
-                <div class="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 p-3">
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Sending to</p>
-                    <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">{{ $assignedShop['name'] }}</p>
-                    <p class="mt-0.5 text-xs text-slate-600 dark:text-gray-400">
-                        {{ $assignedShop['address'] ?? 'No address' }}
-                        @if ($assignedShop['distance_label'])
-                            · <span class="font-semibold text-emerald-700 dark:text-emerald-400">{{ $assignedShop['distance_label'] }}</span> away
+                        {{-- Assigned shop --}}
+                        @if ($assignedShop)
+                        <div class="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 p-3">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Sending to</p>
+                            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">{{ $assignedShop['name'] }}</p>
+                            <p class="mt-0.5 text-xs text-slate-600 dark:text-gray-400 break-words">
+                                {{ $assignedShop['address'] ?? 'No address' }}
+                                @if ($assignedShop['distance_label'])
+                                    · <span class="font-semibold text-emerald-700 dark:text-emerald-400">{{ $assignedShop['distance_label'] }}</span> away
+                                @endif
+                            </p>
+                        </div>
                         @endif
-                    </p>
-                </div>
-                @endif
 
-                {{-- Problem type --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
-                        What's the problem?
-                    </label>
-                    <select wire:model="roadsideProblemType"
-                            class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20">
-                        @foreach ($this->roadsideProblemTypes() as $key => $label)
-                            <option value="{{ $key }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('roadsideProblemType') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
+                        {{-- Problem type --}}
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                What's the problem?
+                            </label>
+                            <select wire:model="roadsideProblemType"
+                                    class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20">
+                                @foreach ($this->roadsideProblemTypes() as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('roadsideProblemType') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-                {{-- Description --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
-                        Details <span class="text-slate-400">(optional)</span>
-                    </label>
-                    <textarea wire:model="roadsideDescription" rows="2"
-                              placeholder="e.g. Rear-left tire completely flat, no spare."
-                              class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20"></textarea>
-                    @error('roadsideDescription') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
+                        {{-- Description --}}
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                Details <span class="text-slate-400">(optional)</span>
+                            </label>
+                            <textarea wire:model="roadsideDescription" rows="2"
+                                      placeholder="e.g. Rear-left tire completely flat, no spare."
+                                      class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20"></textarea>
+                            @error('roadsideDescription') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-                {{-- Vehicle --}}
-                @if ($this->vehicles->isNotEmpty())
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
-                        Vehicle <span class="text-slate-400">(optional)</span>
-                    </label>
-                    <select wire:model="roadsideVehicleId"
-                            class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20">
-                        <option value="">Not specified</option>
-                        @foreach ($this->vehicles as $v)
-                            <option value="{{ $v->id }}">
-                                {{ $v->plate_number }} — {{ trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) ?: 'Vehicle' }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('roadsideVehicleId') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
-                @endif
+                        {{-- Vehicle --}}
+                        @if ($this->vehicles->isNotEmpty())
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                Vehicle <span class="text-slate-400">(optional)</span>
+                            </label>
+                            <select wire:model="roadsideVehicleId"
+                                    class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20">
+                                <option value="">Not specified</option>
+                                @foreach ($this->vehicles as $v)
+                                    <option value="{{ $v->id }}">
+                                        {{ $v->plate_number }} — {{ trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) ?: 'Vehicle' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('roadsideVehicleId') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        @endif
 
-                {{-- Landmark --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
-                        Landmark <span class="text-slate-400">(optional)</span>
-                    </label>
-                    <input wire:model="roadsideAddress" type="text"
-                           placeholder="Near what landmark or street?"
-                           class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20" />
-                    @error('roadsideAddress') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
+                        {{-- Landmark --}}
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                Landmark <span class="text-slate-400">(optional)</span>
+                            </label>
+                            <input wire:model="roadsideAddress" type="text"
+                                   placeholder="Near what landmark or street?"
+                                   class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20" />
+                            @error('roadsideAddress') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-                {{-- Location pin --}}
-                <div class="rounded-xl border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/40 p-3">
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Your location</p>
-                    <p class="mt-1 font-mono text-xs text-slate-700 dark:text-gray-300">
-                        {{ number_format($userLat ?? 0, 5) }}, {{ number_format($userLng ?? 0, 5) }}
-                    </p>
+                        {{-- Location pin --}}
+                        <div class="rounded-xl border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/40 p-3">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Your location</p>
+                            <p class="mt-1 font-mono text-xs text-slate-700 dark:text-gray-300 break-all">
+                                {{ number_format($userLat ?? 0, 5) }}, {{ number_format($userLng ?? 0, 5) }}
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- Footer --}}
+                    <div class="rs-foot border-t border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900/50 px-4 sm:px-6 pt-4">
+                        <button wire:click="closeRoadsideModal" type="button"
+                                class="rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-700">
+                            Cancel
+                        </button>
+                        <button wire:click="submitRoadsideRequest"
+                                wire:loading.attr="disabled" wire:target="submitRoadsideRequest"
+                                type="button"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-red-500/30 transition hover:bg-red-700 disabled:opacity-60">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                            </svg>
+                            <span wire:loading.remove wire:target="submitRoadsideRequest">Send request</span>
+                            <span wire:loading wire:target="submitRoadsideRequest">Sending…</span>
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            {{-- Footer --}}
-            <div class="flex items-center justify-end gap-3 border-t border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900/50 px-6 py-4">
-                <button wire:click="closeRoadsideModal" type="button"
-                        class="rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-700">
-                    Cancel
-                </button>
-                <button wire:click="submitRoadsideRequest"
-                        wire:loading.attr="disabled" wire:target="submitRoadsideRequest"
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-red-500/30 transition hover:bg-red-700 disabled:opacity-60">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                    </svg>
-                    <span wire:loading.remove wire:target="submitRoadsideRequest">Send request</span>
-                    <span wire:loading wire:target="submitRoadsideRequest">Sending…</span>
-                </button>
-            </div>
-        </div>
-    </div>
+        @endteleport
     @endif
 
     {{-- Alpine map engine --}}
@@ -941,6 +1060,7 @@ new #[Layout('layouts.customer')] class extends Component
                 userLocation: null,
                 shops: config.shops || [],
                 requests: config.requests || [],
+                _ro: null,
 
                 init() {
                     if (this.map) {
@@ -965,6 +1085,8 @@ new #[Layout('layouts.customer')] class extends Component
                             zoom: config.initialZoom || 11,
                             zoomControl: true,
                             scrollWheelZoom: true,
+                            tap: true,
+                            touchZoom: true,
                         });
 
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -978,10 +1100,23 @@ new #[Layout('layouts.customer')] class extends Component
                         this.renderMarkers();
 
                         setTimeout(() => this.map && this.map.invalidateSize(), 200);
+
+                        if (typeof ResizeObserver !== 'undefined') {
+                            this._ro = new ResizeObserver(() => {
+                                if (this.map) this.map.invalidateSize();
+                            });
+                            this._ro.observe(el);
+                        }
+
+                        // Phone rotation / tablet split-screen
+                        window.addEventListener('orientationchange', () => {
+                            setTimeout(() => this.map && this.map.invalidateSize(), 300);
+                        });
                     });
                 },
 
                 destroy() {
+                    if (this._ro) { try { this._ro.disconnect(); } catch (e) {} this._ro = null; }
                     if (this.map) {
                         try { this.map.off(); this.map.remove(); } catch (e) {}
                         this.map = null;
@@ -1016,6 +1151,13 @@ new #[Layout('layouts.customer')] class extends Component
                     this.shopLayer.clearLayers();
                     this.requestLayer.clearLayers();
 
+                    // Keeps popups clear of the sticky header and the screen edges
+                    const popupOpts = {
+                        maxWidth: 240,
+                        autoPanPaddingTopLeft: [16, 90],
+                        autoPanPaddingBottomRight: [16, 16],
+                    };
+
                     this.shops.forEach((shop) => {
                         const statusColor = {
                             open:         '#10b981',
@@ -1044,7 +1186,7 @@ new #[Layout('layouts.customer')] class extends Component
                         const marker = L.marker([shop.lat, shop.lng], { icon }).addTo(this.shopLayer);
 
                         marker.bindPopup(`
-                            <div style="min-width: 200px; font-family: inherit;">
+                            <div style="min-width: 0; font-family: inherit;">
                                 <strong style="font-size: 14px;">${this.escapeHtml(shop.name)}</strong>
                                 ${distanceLabel ? `
                                     <div style="font-size: 12px; color: #FF5E14; font-weight: 700; margin-top: 4px;">
@@ -1063,7 +1205,7 @@ new #[Layout('layouts.customer')] class extends Component
                                     </a>
                                 </div>
                             </div>
-                        `);
+                        `, popupOpts);
 
                         marker.on('click', () => $wire.selectTenant(shop.id));
                     });
@@ -1088,7 +1230,7 @@ new #[Layout('layouts.customer')] class extends Component
                         const marker = L.marker([req.lat, req.lng], { icon, zIndexOffset: 1000 }).addTo(this.requestLayer);
 
                         marker.bindPopup(`
-                            <div style="min-width: 220px; font-family: inherit;">
+                            <div style="min-width: 0; font-family: inherit;">
                                 <strong style="font-size: 14px; color: #dc2626;">🆘 ${this.escapeHtml(req.request_number)}</strong>
                                 ${distanceLabel ? `
                                     <div style="font-size: 12px; color: #dc2626; font-weight: 700; margin-top: 4px;">
@@ -1103,7 +1245,7 @@ new #[Layout('layouts.customer')] class extends Component
                                     ${req.address ? `<div style="opacity: 0.75; margin-top: 4px;">${this.escapeHtml(req.address)}</div>` : ''}
                                 </div>
                             </div>
-                        `);
+                        `, popupOpts);
 
                         marker.on('click', () => $wire.selectRequest(req.id));
                     });
@@ -1155,7 +1297,6 @@ new #[Layout('layouts.customer')] class extends Component
                 requestRoadside() {
                     if (this.locating) return;
 
-                    // Already know the location → straight to modal
                     if (this.userLocation) {
                         $wire.openRoadsideModal();
                         return;

@@ -118,15 +118,3 @@
         </div>
     </div>
 </header>
-
-<script>
-    (function () {
-        const toggle = document.getElementById('darkModeToggle');
-        if (!toggle) return;
-
-        toggle.addEventListener('click', function () {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
-    })();
-</script>

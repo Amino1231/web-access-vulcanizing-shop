@@ -11,62 +11,62 @@
                 <div class="absolute bottom-10 right-10 w-96 h-96 bg-orange-400 rounded-full blur-3xl"></div>
             </div>
 
-            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
-                <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24 xl:py-32">
+                <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16 items-center">
 
                     {{-- Left: copy --}}
                     <div class="text-center lg:text-left">
-                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-xs sm:text-sm font-semibold rounded-full mb-6">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-xs sm:text-sm font-semibold rounded-full mb-5 sm:mb-6">
                             <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
                             {{ $this->openNowCount }} {{ \Illuminate\Support\Str::plural('shop', $this->openNowCount) }} open now
                         </div>
 
-                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white leading-tight mb-6">
+                        <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white leading-tight mb-5 sm:mb-6">
                             Find your
                             <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-600">Vulcanizing Shop</span>
                             near you
                         </h1>
 
-                        <p class="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto lg:mx-0">
+                        <p class="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-7 sm:mb-8 max-w-lg mx-auto lg:mx-0">
                             Locate trusted vulcanizing shops near you. Book appointments instantly, get roadside help, and get back on the road faster.
                         </p>
 
-                        <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
+                        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start mb-10 sm:mb-12">
                             <a href="#map"
-                               class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/30 transition-all hover:shadow-orange-500/40 hover:-translate-y-0.5">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/30 transition-all hover:shadow-orange-500/40 hover:-translate-y-0.5 text-sm sm:text-base">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 Find shops near me
                             </a>
                             <a href="#map"
-                               class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:-translate-y-0.5">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:-translate-y-0.5 text-sm sm:text-base">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                                 </svg>
                                 Browse shops
                             </a>
                         </div>
 
-                        <div class="grid grid-cols-3 gap-4 sm:gap-6">
+                        <div class="grid grid-cols-3 gap-3 sm:gap-6">
                             <div class="text-center lg:text-left">
-                                <p class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{{ $this->shopCount }}</p>
-                                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Partner Shops</p>
+                                <p class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white">{{ $this->shopCount }}</p>
+                                <p class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400">Partner Shops</p>
                             </div>
                             <div class="text-center lg:text-left">
-                                <p class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{{ $this->openNowCount }}</p>
-                                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Open Right Now</p>
+                                <p class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white">{{ $this->openNowCount }}</p>
+                                <p class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400">Open Right Now</p>
                             </div>
                             <div class="text-center lg:text-left">
-                                <p class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">24/7</p>
-                                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Roadside Help</p>
+                                <p class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white">24/7</p>
+                                <p class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400">Roadside Help</p>
                             </div>
                         </div>
                     </div>
 
                     {{-- Right: mini-map preview card --}}
-                    <div class="relative">
+                    <div class="relative hidden lg:block">
                         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl shadow-gray-900/10 dark:shadow-black/30 overflow-hidden border border-gray-200 dark:border-gray-700">
                             <div class="relative h-64 sm:h-80 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
                                 <div class="text-center px-6">
@@ -108,18 +108,19 @@
         {{-- ════════════════════════════════════════════════════ --}}
         {{-- LIVE MAP --}}
         {{-- ════════════════════════════════════════════════════ --}}
-        <section id="map" class="py-16 sm:py-20 bg-white dark:bg-gray-900"
+        <section id="map" class="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-900"
                  wire:poll.15s="pollRefresh">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="text-center mb-10">
+                <div class="text-center mb-8 sm:mb-10">
                     <span class="text-xs sm:text-sm font-semibold text-orange-500 uppercase tracking-wider">Locator</span>
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mt-2 mb-4">Shops near you</h2>
-                    <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                    <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white mt-2 mb-3 sm:mb-4">Shops near you</h2>
+                    <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-2">
                         Click "Locate me" to sort shops by distance. Every pin is a verified partner shop you can book with.
                     </p>
                 </div>
 
-                <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+                {{-- Layout: mobile stacks map + panel; desktop side-by-side --}}
+                <div class="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
 
                     {{-- Map --}}
                     <div
@@ -133,23 +134,23 @@
                         @map:center.window="centerOn($event.detail)"
                         class="relative rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm"
                     >
-                        <div id="landing-map" class="h-[500px] sm:h-[600px] w-full"></div>
+                        <div id="landing-map" class="h-[360px] sm:h-[460px] md:h-[520px] lg:h-[600px] xl:h-[640px] w-full"></div>
 
                         {{-- Live pill --}}
-                        <div class="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur border border-slate-200 dark:border-gray-700 px-3 py-1.5 shadow-sm">
+                        <div class="absolute right-3 top-3 sm:right-4 sm:top-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur border border-slate-200 dark:border-gray-700 px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm">
                             <span class="relative flex h-2 w-2">
                                 <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
                                 <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                             </span>
-                            <span class="text-xs font-semibold text-slate-700 dark:text-gray-200">Live</span>
+                            <span class="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-gray-200">Live</span>
                         </div>
 
                         {{-- Locate button --}}
                         <button type="button" id="landing-locate" @click="locateMe()"
-                                class="absolute bottom-4 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 shadow-lg text-slate-700 dark:text-gray-200 transition hover:bg-slate-50 dark:hover:bg-gray-800"
+                                class="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-10 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 shadow-lg text-slate-700 dark:text-gray-200 transition hover:bg-slate-50 dark:hover:bg-gray-800"
                                 :class="locating && 'animate-pulse'"
                                 title="Center on my location">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="3" />
                                 <circle cx="12" cy="12" r="9" />
                                 <path stroke-linecap="round" d="M12 3v2m0 14v2M3 12h2m14 0h2" />
@@ -159,8 +160,8 @@
                         {{-- Locate CTA --}}
                         @if ($userLat === null)
                             <button type="button" @click="document.getElementById('landing-locate')?.click()"
-                                    class="absolute bottom-4 left-4 z-10 inline-flex items-center gap-2 rounded-xl bg-[#FF5E14] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition hover:bg-[#D94E10]">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    class="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-10 inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#FF5E14] px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition hover:bg-[#D94E10]">
+                                <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <circle cx="12" cy="12" r="3" />
                                     <circle cx="12" cy="12" r="9" />
                                     <path stroke-linecap="round" d="M12 3v2m0 14v2M3 12h2m14 0h2" />
@@ -174,7 +175,7 @@
                     <div class="space-y-3">
                         @if ($this->selectedShop)
                             @php $s = $this->selectedShop; @endphp
-                            <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+                            <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5">
                                 <div class="flex items-start justify-between gap-2 mb-3">
                                     <div class="min-w-0">
                                         <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">Shop</p>
@@ -206,14 +207,14 @@
                                         </div>
                                     @endif
                                     @if ($s['address'])
-                                        <p class="text-slate-600 dark:text-gray-400">{{ $s['address'] }}</p>
+                                        <p class="text-slate-600 dark:text-gray-400 break-words">{{ $s['address'] }}</p>
                                     @endif
                                     @if ($s['phone'])
-                                        <p class="text-slate-600 dark:text-gray-400">{{ $s['phone'] }}</p>
+                                        <p class="text-slate-600 dark:text-gray-400 break-words">{{ $s['phone'] }}</p>
                                     @endif
                                 </div>
 
-                                <div class="mt-4 flex gap-2">
+                                <div class="mt-4 flex flex-col sm:flex-row gap-2">
                                     <button type="button" wire:click="centerOn({{ $s['lat'] }}, {{ $s['lng'] }}, 16)"
                                             class="flex-1 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-gray-200 hover:bg-slate-50">
                                         Zoom in
@@ -225,8 +226,8 @@
                                 </div>
                             </div>
                         @else
-                            <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-                                <div class="mb-3 flex items-center justify-between">
+                            <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5">
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                                     <h3 class="text-sm font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">
                                         All shops
                                     </h3>
@@ -237,7 +238,7 @@
                                     @endif
                                 </div>
 
-                                <div class="space-y-2 max-h-[520px] overflow-y-auto">
+                                <div class="space-y-2 max-h-[300px] sm:max-h-[400px] lg:max-h-[520px] overflow-y-auto -mx-1 px-1">
                                     @forelse ($this->shops as $index => $shop)
                                         <button type="button"
                                                 wire:click="selectTenant({{ $shop['id'] }}); centerOn({{ $shop['lat'] }}, {{ $shop['lng'] }}, 15)"
@@ -293,17 +294,17 @@
         {{-- ════════════════════════════════════════════════════ --}}
         {{-- SERVICES --}}
         {{-- ════════════════════════════════════════════════════ --}}
-        <section class="py-16 sm:py-24 bg-gray-50 dark:bg-gray-950">
+        <section class="py-12 sm:py-16 lg:py-24 bg-gray-50 dark:bg-gray-950">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="text-center mb-12 sm:mb-16">
+                <div class="text-center mb-10 sm:mb-12 lg:mb-16">
                     <span class="text-xs sm:text-sm font-semibold text-orange-500 uppercase tracking-wider">Our Services</span>
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mt-2 mb-4">What you can book</h2>
-                    <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                    <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white mt-2 mb-3 sm:mb-4">What you can book</h2>
+                    <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-2">
                         From minor punctures to complete tire replacement, partner shops on the platform cover it all.
                     </p>
                 </div>
 
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
 
                     @php
                         $services = [
@@ -317,39 +318,39 @@
                     @endphp
 
                     @foreach ($services as $svc)
-                        <div class="group p-6 sm:p-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300">
-                            <div class="w-12 h-12 bg-orange-100 dark:bg-orange-500/20 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <div class="group p-5 sm:p-6 lg:p-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300">
+                            <div class="w-11 h-11 sm:w-12 sm:h-12 bg-orange-100 dark:bg-orange-500/20 rounded-xl flex items-center justify-center mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
                                 @if ($svc['icon'] === 'cog')
-                                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                 @elseif ($svc['icon'] === 'refresh')
-                                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                     </svg>
                                 @elseif ($svc['icon'] === 'plus')
-                                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 @elseif ($svc['icon'] === 'bolt')
-                                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                 @elseif ($svc['icon'] === 'shield')
-                                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.003 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                     </svg>
                                 @else
-                                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                 @endif
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">{{ $svc['title'] }}</h3>
+                            <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-2">{{ $svc['title'] }}</h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{{ $svc['desc'] }}</p>
                             <a href="#map"
-                               class="mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
+                               class="mt-4 sm:mt-5 flex items-center text-sm font-medium text-orange-500 group-hover:gap-2 transition-all">
                                 Find a shop
                                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -364,18 +365,18 @@
         {{-- ════════════════════════════════════════════════════ --}}
         {{-- CTA --}}
         {{-- ════════════════════════════════════════════════════ --}}
-        <section class="py-16 sm:py-20 bg-gradient-to-r from-orange-500 to-orange-600">
+        <section class="py-12 sm:py-16 lg:py-20 bg-gradient-to-r from-orange-500 to-orange-600">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white mb-4">
+                <h2 class="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold text-white mb-3 sm:mb-4">
                     Need tire service now?
                 </h2>
-                <p class="text-orange-100 max-w-xl mx-auto mb-8">
+                <p class="text-sm sm:text-base text-orange-100 max-w-xl mx-auto mb-6 sm:mb-8">
                     Find a shop near you, browse their services, and book in seconds.
                 </p>
-                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                     <a href="#map"
-                       class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-orange-600 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       class="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 bg-white text-orange-600 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 text-sm sm:text-base">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
@@ -383,8 +384,8 @@
                     </a>
                     @guest
                     <a href="{{ route('register') }}"
-                       class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-400/30 hover:bg-orange-400/40 text-white font-semibold rounded-xl border border-white/30 transition-all hover:-translate-y-0.5">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       class="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 bg-orange-400/30 hover:bg-orange-400/40 text-white font-semibold rounded-xl border border-white/30 transition-all hover:-translate-y-0.5 text-sm sm:text-base">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
                         Create an account
@@ -453,6 +454,8 @@
                             zoom: config.initialZoom || 6,
                             zoomControl: true,
                             scrollWheelZoom: true,
+                            tap: true,
+                            touchZoom: true,
                         });
 
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -465,10 +468,20 @@
                         this.renderMarkers();
 
                         setTimeout(() => this.map && this.map.invalidateSize(), 200);
+
+                        // Re-fit when the container changes size (mobile rotate, sidebar toggle, etc.)
+                        if (typeof ResizeObserver !== 'undefined') {
+                            const ro = new ResizeObserver(() => {
+                                if (this.map) this.map.invalidateSize();
+                            });
+                            ro.observe(el);
+                            this._ro = ro;
+                        }
                     });
                 },
 
                 destroy() {
+                    if (this._ro) { try { this._ro.disconnect(); } catch (e) {} this._ro = null; }
                     if (this.map) {
                         try { this.map.off(); this.map.remove(); } catch (e) {}
                         this.map = null;
