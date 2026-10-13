@@ -3,6 +3,7 @@
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Notifications\AppointmentStatusChanged;
+use App\Notifications\JobAssignedToEmployee;                   // ← NEW
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
@@ -23,7 +24,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
     public int $perPage = 15;
 
-    /** Confirmation modal state */
     public ?int $confirmingId = null;
     public ?string $confirmingAction = null;
     public ?string $confirmingLabel = null;
@@ -160,7 +160,8 @@ new #[Layout('layouts.shop_owner')] class extends Component
             return;
         }
 
-        $appointment = Appointment::where('tenant_id', $tenantId)
+        $appointment = Appointment::with(['employee.user', 'service', 'tenant.user'])   // ← NEW eager-load
+            ->where('tenant_id', $tenantId)
             ->find($this->confirmingId);
         if (! $appointment) {
             $this->cancelConfirmation();
@@ -178,6 +179,20 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         if ($newStatus) {
             $appointment->update(['status' => $newStatus->value]);
+
+            // ─── NEW: Notify the assigned employee ───
+            if (in_array($newStatus, [AppointmentStatus::Confirmed, AppointmentStatus::InProgress], true)) {
+                $employeeUser = $appointment->employee?->user;
+                if ($employeeUser) {
+                    $employeeUser->notify(new JobAssignedToEmployee(
+                        jobType: 'appointment',
+                        jobId: $appointment->id,
+                        jobNumber: $appointment->appointment_number,
+                        scheduledAt: $appointment->start_time->format('M d, g:i A'),
+                        serviceName: $appointment->service?->name ?? 'Service',
+                    ));
+                }
+            }
 
             try {
                 $appointment->customer?->notify(

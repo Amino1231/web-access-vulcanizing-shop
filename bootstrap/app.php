@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => AdminMiddleware::class,
             'customer' => CustomerMiddleware::class,
             'owner' => ShopOwnerMiddleware::class,
+            'employee' => EmployeeMiddleware::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
