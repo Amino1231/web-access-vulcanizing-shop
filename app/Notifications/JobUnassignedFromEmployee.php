@@ -24,10 +24,10 @@ class JobUnassignedFromEmployee extends Notification implements ShouldQueue
     public function toArray(object $notifiable): array
     {
         return [
-            'kind'    => 'mechanic.job_removed',
+            'kind'    => 'employee.job_removed',
             'title'   => 'Job reassigned',
             'message' => "{$this->jobNumber} — {$this->reason}",
-            'url'     => route('mechanic.dashboard'),
+            'url'     => route('employee.dashboard'),
         ];
     }
 

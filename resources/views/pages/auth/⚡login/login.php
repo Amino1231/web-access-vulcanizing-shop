@@ -46,6 +46,7 @@ new #[Layout('layouts.auth')] class extends Component
 
         RateLimiter::clear($key);
         session()->regenerate();
+        session()->forget('active_tenant_id'); // ← prevent stale shop from previous session
 
         return $this->redirectBasedOnRole();
     }
@@ -86,8 +87,30 @@ new #[Layout('layouts.auth')] class extends Component
 
         // ─── Employee ────────────────────────────
         if ($user->hasRole('employee')) {
-            // No dedicated employee dashboard yet — reuse the owner one.
-            return redirect()->route('owner.dashboard');
+            // Must have an Employee record (assigned to a shop) to use the portal
+            $employee = $user->currentEmployee();
+
+            if (! $employee) {
+                $this->logoutWithError(
+                    'Your account is not assigned to any shop yet. Please contact the shop owner.'
+                );
+                return null;
+            }
+
+            // Optional: block if the shop isn't approved
+            $shop = $employee->tenant;
+            $shopStatus = $shop?->verification_status instanceof VerificationStatus
+                ? $shop->verification_status->value
+                : $shop?->verification_status;
+
+            if ($shop && $shopStatus !== VerificationStatus::Approved->value) {
+                $this->logoutWithError(
+                    'The shop you belong to is not yet approved. Please contact the shop owner.'
+                );
+                return null;
+            }
+
+            return redirect()->route('employee.dashboard');
         }
 
         // ─── Customer ────────────────────────────
@@ -96,12 +119,20 @@ new #[Layout('layouts.auth')] class extends Component
         }
 
         // ─── No role assigned → log out and explain ────
+        $this->logoutWithError('Your account has no assigned role. Please contact support.');
+
+        return null;
+    }
+
+    /**
+     * Invalidate the session and surface a friendly error on the login form.
+     */
+    protected function logoutWithError(string $message): void
+    {
         Auth::logout();
         session()->invalidate();
         session()->regenerateToken();
 
-        $this->addError('email', 'Your account has no assigned role. Please contact support.');
-
-        return null;
+        $this->addError('email', $message);
     }
 };
