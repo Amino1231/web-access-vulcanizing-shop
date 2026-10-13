@@ -63,9 +63,12 @@ new #[Layout('layouts.admin')] class extends Component
     {
         [$start, $end] = $this->period;
 
-        $gmv = (float) Sale::whereIn('status', ['paid', 'completed'])
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('final_amount');
+        $salesQuery = Sale::whereIn('status', ['paid', 'completed'])
+            ->whereBetween('created_at', [$start, $end]);
+
+        $grossRevenue     = (float) (clone $salesQuery)->sum('final_amount');
+        $platformEarnings = (float) (clone $salesQuery)->sum('platform_commission');
+        $shopPayouts      = (float) (clone $salesQuery)->sum('shop_net_revenue');
 
         $orders = Order::whereBetween('created_at', [$start, $end])->count();
 
@@ -77,21 +80,22 @@ new #[Layout('layouts.admin')] class extends Component
             ? (int) round(($completedOrders / $orders) * 100)
             : 0;
 
-        $newUsers = User::whereBetween('created_at', [$start, $end])->count();
-
-        $newShops = Tenant::whereBetween('created_at', [$start, $end])->count();
+        $newUsers  = User::whereBetween('created_at', [$start, $end])->count();
+        $newShops  = Tenant::whereBetween('created_at', [$start, $end])->count();
 
         $activeShops = Tenant::where('is_active', true)
             ->where('verification_status', 'approved')
             ->count();
 
         return [
-            ['label' => 'Platform GMV',     'value' => '₱'.number_format($gmv, 2),  'tone' => 'green'],
-            ['label' => 'Orders placed',    'value' => (string) $orders,            'tone' => 'orange'],
-            ['label' => 'Completion rate',  'value' => $completionRate.'%',         'tone' => 'amber'],
-            ['label' => 'New users',        'value' => (string) $newUsers,          'tone' => 'red'],
-            ['label' => 'New shops',        'value' => (string) $newShops,          'tone' => 'green'],
-            ['label' => 'Active shops',     'value' => (string) $activeShops,       'tone' => 'orange'],
+            ['label' => 'Platform GMV',      'value' => '₱'.number_format($grossRevenue, 2),     'tone' => 'green'],
+            ['label' => 'Platform Earnings', 'value' => '₱'.number_format($platformEarnings, 2), 'tone' => 'emerald'],
+            ['label' => 'Shop Payouts',      'value' => '₱'.number_format($shopPayouts, 2),      'tone' => 'blue'],
+            ['label' => 'Orders placed',     'value' => (string) $orders,                        'tone' => 'orange'],
+            ['label' => 'Completion rate',   'value' => $completionRate.'%',                     'tone' => 'amber'],
+            ['label' => 'New users',         'value' => (string) $newUsers,                      'tone' => 'red'],
+            ['label' => 'New shops',         'value' => (string) $newShops,                      'tone' => 'green'],
+            ['label' => 'Active shops',      'value' => (string) $activeShops,                   'tone' => 'orange'],
         ];
     }
 
@@ -159,6 +163,53 @@ new #[Layout('layouts.admin')] class extends Component
             'orders'   => (int) $row->orders,
             'revenue'  => (float) $row->revenue,
         ])->toArray();
+    }
+
+    // ─────────────────────────────────────────
+    // Commission breakdown — per-shop revenue split
+    // ─────────────────────────────────────────
+
+    #[Computed]
+    public function shopCommissionBreakdown()
+    {
+        [$start, $end] = $this->period;
+
+        $rows = Sale::query()
+            ->selectRaw('
+                tenant_id,
+                COUNT(*) as sale_count,
+                SUM(final_amount) as gross_revenue,
+                SUM(platform_commission) as platform_earnings,
+                SUM(shop_net_revenue) as shop_payout
+            ')
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('created_at', [$start, $end])
+            ->groupBy('tenant_id')
+            ->orderByDesc('platform_earnings')
+            ->limit(20)
+            ->get();
+
+        $tenantIds = $rows->pluck('tenant_id');
+        $shops = Tenant::query()
+            ->whereIn('id', $tenantIds)
+            ->select('id', 'name', 'logo', 'commission_rate')
+            ->get()
+            ->keyBy('id');
+
+        return $rows->map(function ($row) use ($shops) {
+            $shop = $shops->get($row->tenant_id);
+
+            return [
+                'tenant_id'         => (int) $row->tenant_id,
+                'shop_name'         => $shop?->name ?? 'Deleted shop',
+                'shop_logo'         => $shop?->logo ? asset('storage/'.$shop->logo) : null,
+                'commission_rate'   => (float) ($shop?->commission_rate ?? 0),
+                'sale_count'        => (int) $row->sale_count,
+                'gross_revenue'     => (float) $row->gross_revenue,
+                'platform_earnings' => (float) $row->platform_earnings,
+                'shop_payout'       => (float) $row->shop_payout,
+            ];
+        })->toArray();
     }
 
     // ─────────────────────────────────────────

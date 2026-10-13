@@ -73,7 +73,7 @@ class AdminDashboardMetrics
     }
 
     // ─────────────────────────────────────────────
-    // Money KPIs — GMV, orders, AOV, customers
+    // Money KPIs — GMV, platform earnings, orders, AOV
     // ─────────────────────────────────────────────
 
     public function moneyKpis(): array
@@ -83,10 +83,17 @@ class AdminDashboardMetrics
         $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
         $lastMonthEnd   = $monthStart->copy()->subSecond();
 
-        // All-time GMV
+        // ─── Platform GMV (gross merchandise value) ───
         $totalGmv = (float) Sale::whereIn('status', ['paid', 'completed'])->sum('final_amount');
 
-        // This month vs last month GMV
+        // ─── Platform earnings (commission) ───
+        $totalPlatformEarnings = (float) Sale::whereIn('status', ['paid', 'completed'])
+            ->sum('platform_commission');
+
+        $totalShopPayouts = (float) Sale::whereIn('status', ['paid', 'completed'])
+            ->sum('shop_net_revenue');
+
+        // ─── This month vs last month ───
         $thisMonthGmv = (float) Sale::whereIn('status', ['paid', 'completed'])
             ->whereBetween('created_at', [$monthStart, $now])
             ->sum('final_amount');
@@ -95,12 +102,17 @@ class AdminDashboardMetrics
             ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
             ->sum('final_amount');
 
+        $thisMonthEarnings = (float) Sale::whereIn('status', ['paid', 'completed'])
+            ->whereBetween('created_at', [$monthStart, $now])
+            ->sum('platform_commission');
+
+        $lastMonthEarnings = (float) Sale::whereIn('status', ['paid', 'completed'])
+            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+            ->sum('platform_commission');
+
         // Orders this month
         $thisMonthOrders = Order::whereBetween('created_at', [$monthStart, $now])->count();
         $lastMonthOrders = Order::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
-
-        // Total sales count (all-time)
-        $totalSales = Sale::whereIn('status', ['paid', 'completed'])->count();
 
         // Active customers = distinct customers with at least one order
         $activeCustomers = (int) Order::distinct('customer_id')->count('customer_id');
@@ -114,6 +126,18 @@ class AdminDashboardMetrics
                 'value' => '₱'.number_format($totalGmv, 2),
                 'delta' => $this->moneyDelta($thisMonthGmv, $lastMonthGmv),
                 'tone'  => 'green',
+            ],
+            [
+                'label' => 'Platform earnings',
+                'value' => '₱'.number_format($totalPlatformEarnings, 2),
+                'delta' => $this->moneyDelta($thisMonthEarnings, $lastMonthEarnings),
+                'tone'  => 'emerald',
+            ],
+            [
+                'label' => 'Shop payouts',
+                'value' => '₱'.number_format($totalShopPayouts, 2),
+                'delta' => 'To owners',
+                'tone'  => 'blue',
             ],
             [
                 'label' => 'Orders this month',
@@ -264,9 +288,17 @@ class AdminDashboardMetrics
             ->groupBy('tenant_id')
             ->pluck('c', 'tenant_id');
 
-        // Revenue from completed sales
+        // Gross revenue from completed sales
         $revenue = Sale::query()
             ->selectRaw('tenant_id, SUM(final_amount) as total')
+            ->where('created_at', '>=', $start)
+            ->whereIn('status', ['paid', 'completed'])
+            ->groupBy('tenant_id')
+            ->pluck('total', 'tenant_id');
+
+        // Platform commission earned
+        $commission = Sale::query()
+            ->selectRaw('tenant_id, SUM(platform_commission) as total')
             ->where('created_at', '>=', $start)
             ->whereIn('status', ['paid', 'completed'])
             ->groupBy('tenant_id')
@@ -296,6 +328,7 @@ class AdminDashboardMetrics
                 'appointments' => (int) ($apptCounts[$t->id] ?? 0),
                 'orders'       => (int) ($orderCounts[$t->id] ?? 0),
                 'revenue'      => (float) ($revenue[$t->id] ?? 0),
+                'commission'   => (float) ($commission[$t->id] ?? 0),
                 'rating'       => isset($ratings[$t->id]) ? round((float) $ratings[$t->id], 1) : null,
             ])
             ->sortByDesc(fn ($s) => $s['revenue'] + ($s['appointments'] * 100))
@@ -357,6 +390,14 @@ class AdminDashboardMetrics
             return null;
         }
 
+        // ─── Revenue aggregation ───────────────────
+        $salesQuery = Sale::where('tenant_id', $tenant->id)
+            ->whereIn('status', ['paid', 'completed']);
+
+        $grossRevenue     = (float) (clone $salesQuery)->sum('final_amount');
+        $platformEarnings = (float) (clone $salesQuery)->sum('platform_commission');
+        $shopNetRevenue   = (float) (clone $salesQuery)->sum('shop_net_revenue');
+
         $stats = [
             'products'        => Product::where('tenant_id', $tenant->id)->count(),
             'orders'          => Order::where('tenant_id', $tenant->id)->count(),
@@ -365,9 +406,13 @@ class AdminDashboardMetrics
             'appointments'    => Appointment::where('tenant_id', $tenant->id)->count(),
             'services'        => Service::where('tenant_id', $tenant->id)->count(),
             'reviews'         => Review::where('tenant_id', $tenant->id)->count(),
-            'revenue'         => (float) Sale::where('tenant_id', $tenant->id)
-                ->whereIn('status', ['paid', 'completed'])
-                ->sum('final_amount'),
+
+            // Revenue flow
+            'revenue'           => $grossRevenue,       // backwards compatibility
+            'gross_revenue'     => $grossRevenue,
+            'platform_earnings' => $platformEarnings,
+            'shop_net_revenue'  => $shopNetRevenue,
+            'commission_rate'   => $tenant->commissionRate(),
         ];
 
         $status = $tenant->verification_status instanceof VerificationStatus
@@ -417,6 +462,7 @@ class AdminDashboardMetrics
                 ->toArray(),
             'is_active'                 => (bool) $tenant->is_active,
             'business_setup_completed'  => (bool) $tenant->business_setup_completed,
+            'commission_rate'           => $tenant->commissionRate(),
             'submitted_at'              => $tenant->submitted_at?->format('M d, Y g:i A'),
             'created_at'                => $tenant->created_at?->format('M d, Y g:i A'),
             'owner' => [

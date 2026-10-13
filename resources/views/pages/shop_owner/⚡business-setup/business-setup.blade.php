@@ -149,6 +149,10 @@
             {{-- Permit documents --}}
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">Permit / business documents</label>
+                <p class="mb-2 text-xs text-slate-500">
+                    Upload a scanned PDF, or a clear photo of your printed document.
+                    Accepted formats: PDF, JPG, PNG, WEBP. Max 4 MB per file.
+                </p>
                 <input wire:model="permit_documents" type="file" multiple
                     class="block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" />
                 @error('permit_documents') <span class="mt-2 block text-sm text-red-600">{{ $message }}</span> @enderror

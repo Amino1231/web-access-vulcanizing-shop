@@ -92,24 +92,26 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $tenantId = $this->tenantId();
         if (! $tenantId) {
             return [
-                'revenue' => 0.0,
-                'sales'   => 0,
-                'avg'     => 0.0,
-                'items'   => 0,
+                'gross'      => 0.0,
+                'commission' => 0.0,
+                'net'        => 0.0,
+                'sales'      => 0,
+                'avg'        => 0.0,
+                'items'      => 0,
             ];
         }
 
         [$start, $end] = $this->period;
 
-        $revenue = (float) Sale::where('tenant_id', $tenantId)
+        $salesQuery = Sale::where('tenant_id', $tenantId)
             ->where('status', 'paid')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('final_amount');
+            ->whereBetween('created_at', [$start, $end]);
 
-        $salesCount = (int) Sale::where('tenant_id', $tenantId)
-            ->where('status', 'paid')
-            ->whereBetween('created_at', [$start, $end])
-            ->count();
+        $gross      = (float) (clone $salesQuery)->sum('final_amount');
+        $commission = (float) (clone $salesQuery)->sum('platform_commission');
+        $net        = (float) (clone $salesQuery)->sum('shop_net_revenue');
+
+        $salesCount = (int) (clone $salesQuery)->count();
 
         $itemsSold = (int) SaleItem::query()
             ->whereHas('sale', fn ($q) => $q
@@ -120,10 +122,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->sum('quantity');
 
         return [
-            'revenue' => $revenue,
-            'sales'   => $salesCount,
-            'avg'     => $salesCount > 0 ? round($revenue / $salesCount, 2) : 0.0,
-            'items'   => $itemsSold,
+            'gross'      => $gross,
+            'commission' => $commission,
+            'net'        => $net,
+            'sales'      => $salesCount,
+            'avg'        => $salesCount > 0 ? round($gross / $salesCount, 2) : 0.0,
+            'items'      => $itemsSold,
         ];
     }
 
@@ -150,7 +154,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         [$start, $end] = $this->period;
 
-        return SaleItem::query()
+        $rows = SaleItem::query()
             ->select([
                 'product_id',
                 DB::raw('SUM(quantity) as qty'),
@@ -165,17 +169,21 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->groupBy('product_id')
             ->orderByDesc('revenue')
             ->limit(5)
+            ->get();
+
+        // Eager-load products in one query to avoid N+1
+        $productIds = $rows->pluck('product_id')->unique();
+        $products = \App\Models\Product::whereIn('id', $productIds)
+            ->select('id', 'name', 'sku')
             ->get()
-            ->map(function ($row) {
-                $product = \App\Models\Product::find($row->product_id);
-                return [
-                    'name'    => $product?->name ?? 'Deleted product',
-                    'sku'     => $product?->sku,
-                    'qty'     => (int) $row->qty,
-                    'revenue' => (float) $row->revenue,
-                ];
-            })
-            ->toArray();
+            ->keyBy('id');
+
+        return $rows->map(fn ($row) => [
+            'name'    => $products->get($row->product_id)?->name ?? 'Deleted product',
+            'sku'     => $products->get($row->product_id)?->sku,
+            'qty'     => (int) $row->qty,
+            'revenue' => (float) $row->revenue,
+        ])->toArray();
     }
 
     #[Computed]

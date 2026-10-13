@@ -20,7 +20,7 @@ class OwnerDashboardMetrics
 
     public function kpis(): array
     {
-        // One query for every order-status count
+        // ─── Order counts ─────────────────────
         $orderCounts = Order::query()
             ->where('tenant_id', $this->tenantId)
             ->selectRaw('status, COUNT(*) as total')
@@ -31,7 +31,7 @@ class OwnerDashboardMetrics
         $totalOrders = array_sum($orderCounts);
         $pending     = (int) ($orderCounts[OrderStatus::Pending->value] ?? 0);
 
-        // One query for product aggregates
+        // ─── Product aggregates ───────────────
         $productStats = Product::query()
             ->where('tenant_id', $this->tenantId)
             ->selectRaw('
@@ -44,17 +44,41 @@ class OwnerDashboardMetrics
         $totalProducts = (int) ($productStats->total ?? 0);
         $lowStock      = (int) ($productStats->low_stock ?? 0);
 
-        // One query for revenue
-        $revenue = (float) Sale::query()
+        // ─── Revenue aggregation (this month) ─
+        $monthStart = now()->copy()->startOfMonth();
+
+        $revenueRow = Sale::query()
             ->where('tenant_id', $this->tenantId)
             ->whereIn('status', ['paid', 'completed'])
-            ->sum('final_amount');
+            ->where('created_at', '>=', $monthStart)
+            ->selectRaw('
+                COALESCE(SUM(final_amount), 0) as gross,
+                COALESCE(SUM(platform_commission), 0) as commission,
+                COALESCE(SUM(shop_net_revenue), 0) as net
+            ')
+            ->first();
+
+        $grossThisMonth      = (float) ($revenueRow->gross ?? 0);
+        $commissionThisMonth = (float) ($revenueRow->commission ?? 0);
+        $netThisMonth        = (float) ($revenueRow->net ?? 0);
 
         return [
             [
-                'label' => 'Revenue',
-                'value' => '₱' . number_format($revenue, 2),
-                'delta' => 'All time',
+                'label' => 'Gross Sales (mo.)',
+                'value' => '₱' . number_format($grossThisMonth, 2),
+                'delta' => 'Before fees',
+                'tone'  => 'blue',
+            ],
+            [
+                'label' => 'Platform Fee (mo.)',
+                'value' => '₱' . number_format($commissionThisMonth, 2),
+                'delta' => 'Platform cut',
+                'tone'  => 'orange',
+            ],
+            [
+                'label' => 'Net Revenue (mo.)',
+                'value' => '₱' . number_format($netThisMonth, 2),
+                'delta' => 'You keep',
                 'tone'  => 'emerald',
             ],
             [
@@ -62,18 +86,6 @@ class OwnerDashboardMetrics
                 'value' => (string) $totalOrders,
                 'delta' => $pending . ' pending',
                 'tone'  => 'orange',
-            ],
-            [
-                'label' => 'Products',
-                'value' => (string) $totalProducts,
-                'delta' => $lowStock . ' low',
-                'tone'  => 'blue',
-            ],
-            [
-                'label' => 'Low stock',
-                'value' => (string) $lowStock,
-                'delta' => $lowStock > 0 ? 'Attention' : 'All good',
-                'tone'  => $lowStock > 0 ? 'red' : 'emerald',
             ],
         ];
     }
@@ -175,7 +187,6 @@ class OwnerDashboardMetrics
 
     public function reviewSummary(): array
     {
-        // Single query for count + average
         $row = Review::query()
             ->where('tenant_id', $this->tenantId)
             ->selectRaw('COUNT(*) as count, COALESCE(AVG(rating), 0) as avg')

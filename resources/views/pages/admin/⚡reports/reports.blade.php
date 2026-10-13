@@ -1,9 +1,11 @@
 @php
 $toneClasses = [
-    'orange' => 'border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/30',
-    'green'  => 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30',
-    'amber'  => 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30',
-    'red'    => 'border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/30',
+    'orange'  => 'border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/30',
+    'green'   => 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30',
+    'emerald' => 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30',
+    'blue'    => 'border-blue-200 bg-blue-50 dark:border-blue-900/40 dark:bg-blue-950/30',
+    'amber'   => 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30',
+    'red'     => 'border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/30',
 ];
 @endphp
 
@@ -15,7 +17,7 @@ $toneClasses = [
             <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400">Analytics</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Platform reports</h1>
             <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
-                Revenue, top performers, and category breakdown across every shop.
+                Revenue, commission, top performers, and category breakdown across every shop.
             </p>
         </div>
 
@@ -63,7 +65,7 @@ $toneClasses = [
 
     {{-- KPI grid --}}
     @php $kpis = $this->kpis; @endphp
-    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         @foreach($kpis as $kpi)
             <article class="rounded-2xl border {{ $toneClasses[$kpi['tone']] ?? 'border-slate-200 bg-white dark:border-gray-800 dark:bg-gray-900' }} p-5 shadow-sm">
                 <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600 dark:text-gray-400">
@@ -72,6 +74,111 @@ $toneClasses = [
                 <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{{ $kpi['value'] }}</h2>
             </article>
         @endforeach
+    </section>
+
+    {{-- ═══════════════════════════════════════════════════ --}}
+    {{-- COMMISSION BREAKDOWN BY SHOP --}}
+    {{-- ═══════════════════════════════════════════════════ --}}
+    <section class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+        <div class="border-b border-slate-200 dark:border-gray-800 px-5 py-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-gray-400">Revenue flow</p>
+                    <h3 class="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white">Commission by shop</h3>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-gray-400">
+                        How customer payments split between platform and shop owners for this period.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        @php $breakdown = $this->shopCommissionBreakdown; @endphp
+
+        @if (empty($breakdown))
+            <div class="p-6">
+                <div class="rounded-2xl border border-dashed border-slate-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/40 p-8 text-center">
+                    <p class="text-sm text-slate-500 dark:text-gray-400">No sales in this period.</p>
+                </div>
+            </div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 dark:divide-gray-800 text-sm">
+                    <thead class="bg-slate-50 dark:bg-gray-800/50">
+                        <tr>
+                            <th class="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Shop</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Rate</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Sales</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Gross Revenue</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">→ To Platform</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">→ To Shop</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                        @foreach ($breakdown as $row)
+                            <tr wire:key="commission-{{ $row['tenant_id'] }}"
+                                class="transition hover:bg-slate-50 dark:hover:bg-gray-800/40">
+
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        @if ($row['shop_logo'])
+                                            <img src="{{ $row['shop_logo'] }}" alt="{{ $row['shop_name'] }}"
+                                                 class="h-9 w-9 shrink-0 rounded-lg border border-slate-200 object-cover dark:border-gray-700" />
+                                        @else
+                                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white dark:bg-gray-700">
+                                                {{ strtoupper(substr($row['shop_name'], 0, 2)) }}
+                                            </div>
+                                        @endif
+                                        <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                                            {{ $row['shop_name'] }}
+                                        </p>
+                                    </div>
+                                </td>
+
+                                <td class="px-4 py-3 text-center">
+                                    <span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-gray-300">
+                                        {{ number_format($row['commission_rate'], 2) }}%
+                                    </span>
+                                </td>
+
+                                <td class="px-4 py-3 text-right text-slate-700 dark:text-gray-300">
+                                    {{ $row['sale_count'] }}
+                                </td>
+
+                                <td class="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">
+                                    ₱{{ number_format($row['gross_revenue'], 2) }}
+                                </td>
+
+                                <td class="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                    ₱{{ number_format($row['platform_earnings'], 2) }}
+                                </td>
+
+                                <td class="px-4 py-3 text-right font-bold text-blue-600 dark:text-blue-400">
+                                    ₱{{ number_format($row['shop_payout'], 2) }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+
+                    {{-- Grand total row --}}
+                    <tfoot class="border-t-2 border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800/70">
+                        <tr>
+                            <td colspan="3" class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-gray-300">
+                                Totals
+                            </td>
+                            <td class="px-4 py-3 text-right text-base font-bold text-slate-900 dark:text-white">
+                                ₱{{ number_format(collect($breakdown)->sum('gross_revenue'), 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-base font-bold text-emerald-600 dark:text-emerald-400">
+                                ₱{{ number_format(collect($breakdown)->sum('platform_earnings'), 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-base font-bold text-blue-600 dark:text-blue-400">
+                                ₱{{ number_format(collect($breakdown)->sum('shop_payout'), 2) }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        @endif
     </section>
 
     {{-- Revenue trend chart --}}
@@ -292,6 +399,8 @@ $toneClasses = [
                 ctx.fillText('₱' + Math.round(val).toLocaleString(), pad.left - 10, y);
             }
 
+            if (!values.length) return;
+
             // Area
             const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + ph);
             gradient.addColorStop(0, 'rgba(255, 94, 20, 0.35)');
@@ -340,4 +449,4 @@ $toneClasses = [
         new ResizeObserver(drawRevenue).observe(revenueCanvas);
     }
 </script>
-@endscript
+@endscript  

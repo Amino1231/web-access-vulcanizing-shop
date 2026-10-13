@@ -2,8 +2,6 @@
 
 use App\Enums\VerificationStatus;
 use App\Models\Tenant;
-use App\Notifications\ShopApproved;
-use App\Notifications\ShopNeedsMoreInfo;
 use App\Notifications\ShopSuspended;
 use App\Support\AdminDashboardMetrics;
 use Livewire\Attributes\Computed;
@@ -19,8 +17,11 @@ new #[Layout('layouts.admin')] class extends Component
     #[Url(history: true)]
     public string $search = '';
 
-    #[Url(history: true)]
-    public string $statusFilter = '';
+    /**
+     * NOTE: `statusFilter` is intentionally removed.
+     * This page shows ONLY approved shops. Pending / Under Review /
+     * Needs Info / Rejected shops live in the Approval Queue.
+     */
 
     #[Url(history: true)]
     public string $activeFilter = '';
@@ -31,17 +32,11 @@ new #[Layout('layouts.admin')] class extends Component
     public ?string $confirmingAction = null;
     public ?string $confirmingName = null;
 
-    public function updatingSearch(): void        { $this->resetPage(); }
-    public function updatingStatusFilter(): void  { $this->resetPage(); }
-    public function updatingActiveFilter(): void  { $this->resetPage(); }
+    public function updatingSearch(): void       { $this->resetPage(); }
+    public function updatingActiveFilter(): void { $this->resetPage(); }
 
     public ?int $viewingTenantId = null;
     public ?array $viewingTenant = null;
-
-    /** Needs-more-info sub-modal state */
-    public ?int $needsInfoId = null;
-    public string $needsInfoName = '';
-    public string $needsInfoReason = '';
 
     public function viewTenant(int $tenantId): void
     {
@@ -62,97 +57,27 @@ new #[Layout('layouts.admin')] class extends Component
         $this->viewingTenant = null;
     }
 
-    public function approveFromModal(int $tenantId): void
-    {
-        $tenant = Tenant::find($tenantId);
-        if (! $tenant) return;
-
-        $tenant->update([
-            'verification_status' => VerificationStatus::Approved->value,
-            'is_active' => true,
-            'rejection_reason' => null,
-            'missing_requirements' => null,
-            'approved_at' => now(),
-        ]);
-
-        $tenant->user?->notify(new ShopApproved($tenant));
-
-        $this->viewTenant($tenantId);
-        unset($this->shops, $this->counts);
-
-        session()->flash('success', "{$tenant->name} approved.");
-    }
-
     public function suspendFromModal(int $tenantId): void
     {
         $tenant = Tenant::find($tenantId);
         if (! $tenant) return;
 
         $tenant->update([
-            'verification_status' => 'suspended',
+            'verification_status' => VerificationStatus::Suspended->value,
             'is_active' => false,
         ]);
 
         $tenant->user?->notify(new ShopSuspended($tenant));
 
-        $this->viewTenant($tenantId);
+        $this->closeTenantModal();
         unset($this->shops, $this->counts);
 
         session()->flash('success', "{$tenant->name} suspended.");
     }
 
-    // ─────────────────────────────────────────
-    // Needs more info
-    // ─────────────────────────────────────────
-
-    public function openNeedsInfo(int $tenantId): void
-    {
-        $tenant = Tenant::find($tenantId);
-        if (! $tenant) return;
-
-        $this->needsInfoId     = $tenant->id;
-        $this->needsInfoName   = $tenant->name;
-        $this->needsInfoReason = '';
-    }
-
-    public function cancelNeedsInfo(): void
-    {
-        $this->needsInfoId     = null;
-        $this->needsInfoName   = '';
-        $this->needsInfoReason = '';
-    }
-
-    public function confirmNeedsInfo(): void
-    {
-        $this->validate([
-            'needsInfoReason' => ['required', 'string', 'min:10', 'max:500'],
-        ], [
-            'needsInfoReason.required' => 'Tell the owner what info you need.',
-            'needsInfoReason.min'      => 'Give them at least 10 characters of guidance.',
-        ]);
-
-        $tenant = Tenant::findOrFail($this->needsInfoId);
-
-        $tenant->update([
-            'verification_status'  => VerificationStatus::NeedsMoreInfo->value,
-            'rejection_reason'     => null,
-            'missing_requirements' => [$this->needsInfoReason],
-            'is_active'            => false,
-        ]);
-
-        $tenant->user?->notify(new ShopNeedsMoreInfo($tenant, [$this->needsInfoReason]));
-
-        $this->cancelNeedsInfo();
-        $this->viewTenant($tenant->id);
-        unset($this->shops, $this->counts);
-
-        session()->flash('success', "{$tenant->name} marked as needing more info.");
-    }
-
     public function clearFilters(): void
     {
         $this->search = '';
-        $this->statusFilter = '';
         $this->activeFilter = '';
         $this->resetPage();
     }
@@ -160,20 +85,9 @@ new #[Layout('layouts.admin')] class extends Component
     #[Computed]
     public function counts(): array
     {
-        $rows = Tenant::query()
-            ->selectRaw('verification_status, COUNT(*) as total')
-            ->groupBy('verification_status')
-            ->pluck('total', 'verification_status')
-            ->toArray();
-
+        // Only the total matters here — the other states belong to the approval queue
         return [
-            'all'             => array_sum($rows),
-            'approved'        => (int) ($rows['approved'] ?? 0),
-            'pending'         => (int) ($rows['pending'] ?? 0),
-            'under_review'    => (int) ($rows['under_review'] ?? 0),
-            'needs_more_info' => (int) ($rows['needs_more_info'] ?? 0),
-            'rejected'        => (int) ($rows['rejected'] ?? 0),
-            'suspended'       => (int) ($rows['suspended'] ?? 0),
+            'all' => Tenant::where('verification_status', VerificationStatus::Approved->value)->count(),
         ];
     }
 
@@ -182,6 +96,8 @@ new #[Layout('layouts.admin')] class extends Component
     {
         return Tenant::query()
             ->with(['user:id,name,email,phone'])
+            // Approved only — this page is dedicated to the approved roster
+            ->where('verification_status', VerificationStatus::Approved->value)
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
                 $q->where(function ($sub) use ($term) {
@@ -193,7 +109,6 @@ new #[Layout('layouts.admin')] class extends Component
                             ->orWhere('email', 'like', $term));
                 });
             })
-            ->when($this->statusFilter !== '', fn ($q) => $q->where('verification_status', $this->statusFilter))
             ->when($this->activeFilter !== '', fn ($q) => $q->where('is_active', $this->activeFilter === 'active'))
             ->latest()
             ->paginate($this->perPage);
@@ -240,7 +155,7 @@ new #[Layout('layouts.admin')] class extends Component
             'activate'   => $tenant->update(['is_active' => true]),
             'deactivate' => $tenant->update(['is_active' => false]),
             'suspend'    => $tenant->update([
-                'verification_status' => 'suspended',
+                'verification_status' => VerificationStatus::Suspended->value,
                 'is_active' => false,
             ]),
             default => null,
@@ -262,52 +177,4 @@ new #[Layout('layouts.admin')] class extends Component
         session()->flash('success', $message);
         $this->cancelAction();
     }
-
-    public function approve(int $tenantId): void
-    {
-        $tenant = Tenant::find($tenantId);
-        if (! $tenant) return;
-
-        $tenant->update([
-            'verification_status' => VerificationStatus::Approved->value,
-            'is_active' => true,
-            'rejection_reason' => null,
-            'missing_requirements' => null,
-            'approved_at' => now(),
-        ]);
-
-        $tenant->user?->notify(new ShopApproved($tenant));
-
-        unset($this->shops, $this->counts);
-
-        session()->flash('success', "{$tenant->name} approved.");
-    }
-
-    public function approveAllPending(): void
-    {
-        $tenants = Tenant::whereIn('verification_status', [
-            VerificationStatus::Pending->value,
-            VerificationStatus::UnderReview->value,
-        ])->with('user')->get();
-
-        $count = Tenant::whereIn('verification_status', [
-            VerificationStatus::Pending->value,
-            VerificationStatus::UnderReview->value,
-        ])->update([
-            'verification_status' => VerificationStatus::Approved->value,
-            'is_active' => true,
-            'rejection_reason' => null,
-            'missing_requirements' => null,
-            'approved_at' => now(),
-        ]);
-
-        foreach ($tenants as $t) {
-            $t->user?->notify(new ShopApproved($t));
-        }
-
-        unset($this->shops, $this->counts);
-
-        session()->flash('success', "{$count} shop(s) approved.");
-    }
-
 };

@@ -5,6 +5,7 @@ use App\Models\Tenant;
 use App\Notifications\ShopApproved;
 use App\Notifications\ShopNeedsMoreInfo;
 use App\Notifications\ShopRejected;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -13,7 +14,7 @@ new #[Layout('layouts.admin')] class extends Component
 {
     use WithPagination;
 
-    public array $shops = [];
+    public int $perPage = 15;
 
     /** Reject modal state */
     public ?int $rejectingId = null;
@@ -25,14 +26,10 @@ new #[Layout('layouts.admin')] class extends Component
     public string $needsInfoName = '';
     public string $needsInfoReason = '';
 
-    public function mount(): void
+    #[Computed]
+    public function shops()
     {
-        $this->loadShops();
-    }
-
-    public function loadShops(): void
-    {
-        $this->shops = Tenant::query()
+        return Tenant::query()
             ->with('user:id,name,email')
             ->whereIn('verification_status', [
                 VerificationStatus::Pending->value,
@@ -40,35 +37,41 @@ new #[Layout('layouts.admin')] class extends Component
                 VerificationStatus::NeedsMoreInfo->value,
                 VerificationStatus::Rejected->value,
             ])
-            ->orderByRaw("FIELD(verification_status, 'pending', 'under_review', 'needs_more_info', 'rejected')")
+            ->orderByRaw("
+                CASE verification_status
+                    WHEN 'pending' THEN 1
+                    WHEN 'under_review' THEN 2
+                    WHEN 'needs_more_info' THEN 3
+                    WHEN 'rejected' THEN 4
+                    ELSE 5
+                END
+            ")
             ->orderByDesc('submitted_at')
-            ->get()
-            ->map(function (Tenant $tenant) {
-                return [
-                    'id'                    => $tenant->id,
-                    'shop_name'             => $tenant->name,
-                    'owner_name'            => $tenant->user?->name ?? 'N/A',
-                    'owner_email'           => $tenant->user?->email ?? 'N/A',
-                    'status'                => $tenant->verification_status ?? VerificationStatus::Pending->value,
-                    'status_label'          => $this->statusLabel($tenant->verification_status),
-                    'address'               => $tenant->address ?? 'N/A',
-                    'phone'                 => $tenant->phone ?? 'N/A',
-                    'submitted_at'          => $tenant->submitted_at?->format('M d, Y') ?? '—',
-                    'rejection_reason'      => $tenant->rejection_reason,
-                    'missing_requirements'  => $tenant->missing_requirements ?? [],
-                    'attachment'            => $this->firstAttachment($tenant->attachment),
-                ];
-            })
-            ->toArray();
+            ->paginate($this->perPage);
     }
 
-    protected function firstAttachment($attachment): ?string
+    #[Computed]
+    public function counts(): array
     {
-        if (is_array($attachment)) {
-            return $attachment[0] ?? null;
-        }
+        $rows = Tenant::query()
+            ->selectRaw('verification_status, COUNT(*) as total')
+            ->whereIn('verification_status', [
+                VerificationStatus::Pending->value,
+                VerificationStatus::UnderReview->value,
+                VerificationStatus::NeedsMoreInfo->value,
+                VerificationStatus::Rejected->value,
+            ])
+            ->groupBy('verification_status')
+            ->pluck('total', 'verification_status')
+            ->toArray();
 
-        return $attachment ?: null;
+        return [
+            'pending'         => (int) ($rows['pending'] ?? 0),
+            'under_review'    => (int) ($rows['under_review'] ?? 0),
+            'needs_more_info' => (int) ($rows['needs_more_info'] ?? 0),
+            'rejected'        => (int) ($rows['rejected'] ?? 0),
+            'total'           => array_sum($rows),
+        ];
     }
 
     protected function statusLabel(?string $value): string
@@ -95,8 +98,9 @@ new #[Layout('layouts.admin')] class extends Component
 
         $tenant->user?->notify(new ShopApproved($tenant));
 
-        session()->flash('success', "{$tenant->name} approved.");
-        $this->loadShops();
+        unset($this->shops, $this->counts);
+
+        session()->flash('success', "{$tenant->name} approved. Now visible in Approved shops.");
     }
 
     // ─────────────────────────────────────────
@@ -132,17 +136,18 @@ new #[Layout('layouts.admin')] class extends Component
         $tenant = Tenant::findOrFail($this->needsInfoId);
 
         $tenant->update([
-            'verification_status'      => VerificationStatus::NeedsMoreInfo->value,
-            'rejection_reason'         => null,
-            'missing_requirements'     => [$this->needsInfoReason],
-            'is_active'                => false,
+            'verification_status'  => VerificationStatus::NeedsMoreInfo->value,
+            'rejection_reason'     => null,
+            'missing_requirements' => [$this->needsInfoReason],
+            'is_active'            => false,
         ]);
 
         $tenant->user?->notify(new ShopNeedsMoreInfo($tenant, [$this->needsInfoReason]));
 
+        unset($this->shops, $this->counts);
+
         session()->flash('success', "{$tenant->name} marked as needing more info.");
         $this->cancelNeedsInfo();
-        $this->loadShops();
     }
 
     // ─────────────────────────────────────────
@@ -154,8 +159,8 @@ new #[Layout('layouts.admin')] class extends Component
         $tenant = Tenant::find($tenantId);
         if (! $tenant) return;
 
-        $this->rejectingId   = $tenant->id;
-        $this->rejectingName = $tenant->name;
+        $this->rejectingId     = $tenant->id;
+        $this->rejectingName   = $tenant->name;
         $this->rejectionReason = '';
     }
 
@@ -187,8 +192,9 @@ new #[Layout('layouts.admin')] class extends Component
 
         $tenant->user?->notify(new ShopRejected($tenant, $this->rejectionReason));
 
+        unset($this->shops, $this->counts);
+
         session()->flash('success', "{$tenant->name} rejected. The owner has been notified.");
         $this->cancelReject();
-        $this->loadShops();
     }
 };
