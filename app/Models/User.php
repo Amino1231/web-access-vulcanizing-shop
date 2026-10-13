@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\VerificationStatus;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -143,6 +144,29 @@ class User extends Authenticatable
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
+    // App\Models\User
+
+    /** Employee profile for the currently active shop (or their first shop). */
+    public function currentEmployee(): ?Employee
+    {
+        $activeId = session('active_tenant_id');
+
+        if ($activeId) {
+            $emp = $this->employee()->where('tenant_id', $activeId)->with('tenant')->first();
+            if ($emp) {
+                return $emp;
+            }
+        }
+
+        return $this->employee()->with('tenant')->first();
+    }
+
+    /** The shop the mechanic is currently working at. */
+    public function currentShop(): ?Tenant
+    {
+        return $this->currentEmployee()?->tenant;
     }
 }

@@ -19,7 +19,22 @@ Route::livewire('/terms-of-service', 'pages::public.terms-of-service')->name('te
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-Route::prefix('customer')->middleware(['customer'])->group(function () {
+
+Route::prefix('employee')->middleware(['employee'])->group(function () {
+
+    Route::livewire('/dashboard', 'pages::employee.dashboard')->name('employee.dashboard');
+
+    Route::livewire('/profile', 'pages::employee.profile')->name('employee.profile');
+    Route::livewire('/update/profile', 'pages::employee.update-profile')->name('employee.update_profile');
+
+    Route::livewire('/appointments', 'pages::employee.appointment-history')->name('employee.appointments');
+    Route::livewire('/appointments/{appointment}', 'pages::employee.appointment-detail')->name('employee.appointment_detail');
+
+    Route::livewire('/roadside', 'pages::employee.roadside-jobs')->name('employee.roadside');
+    Route::livewire('/roadside/{job}', 'pages::employee.roadside-job-detail')->name('employee.roadside_job_detail');
+});
+
+Route::prefix(  'customer')->middleware(['customer'])->group(function () {
     Route::livewire('/dashboard', 'pages::customer.dashboard')->name('customer.dashboard');
 
     Route::livewire('/profile', 'pages::customer.profile')->name('customer.profile');

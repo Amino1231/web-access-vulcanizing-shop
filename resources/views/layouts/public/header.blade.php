@@ -9,7 +9,7 @@
 
                 {{-- Left --}}
                 <div class="flex items-center gap-6">
-                    <a href="{{ route('owner.register') }}" wire:navigate
+                    <a href="{{ route('owner.register') }}" 
                        class="hover:text-orange-400 transition-colors flex items-center gap-1.5">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -48,12 +48,12 @@
                     <span class="w-px h-3 bg-gray-700"></span>
 
                     @auth
-                        <a href="{{ route('customer.dashboard') }}" wire:navigate
+                        <a href="{{ route('customer.dashboard') }}" 
                            class="hover:text-orange-400 transition-colors font-medium">
                             My Account
                         </a>
                     @else
-                        <a href="{{ route('register') }}" wire:navigate
+                        <a href="{{ route('register') }}" 
                            class="hover:text-orange-400 transition-colors font-medium">Sign Up</a>
                     @endauth
                 </div>
@@ -71,7 +71,7 @@
             <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
 
                 {{-- Logo --}}
-                <a href="{{ route('index.page') }}" wire:navigate class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <a href="{{ route('index.page') }}"  class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                     <div class="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
                         <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -105,7 +105,7 @@
 
                     {{-- Auth — desktop + mobile share the same destination, only visibility differs --}}
                     @auth
-                        <a href="{{ route('customer.dashboard') }}" wire:navigate
+                        <a href="{{ route('customer.dashboard') }}" 
                            class="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg shadow-lg shadow-orange-500/30 transition-all hover:-translate-y-0.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -121,7 +121,7 @@
                             </button>
                         </form>
                     @else
-                        <a href="{{ route('login') }}" wire:navigate
+                        <a href="{{ route('login') }}" 
                            class="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg shadow-lg shadow-orange-500/30 transition-all hover:-translate-y-0.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -152,11 +152,11 @@
                 <nav class="flex flex-col gap-1">
 
                     {{-- Primary nav --}}
-                    <a href="{{ route('index.page') }}" wire:navigate
+                    <a href="{{ route('index.page') }}" 
                        class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                         Home
                     </a>
-                    <a href="#" wire:navigate
+                    <a href="#" 
                        class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                         Services
                     </a>
@@ -168,7 +168,7 @@
                        class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                         Help
                     </a>
-                    <a href="{{ route('owner.register') }}" wire:navigate
+                    <a href="{{ route('owner.register') }}" 
                        class="px-3 py-2 text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg transition-colors flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -183,7 +183,7 @@
                     {{-- Auth actions --}}
                     @auth
                         <div class="flex gap-2">
-                            <a href="{{ route('customer.dashboard') }}" wire:navigate
+                            <a href="{{ route('customer.dashboard') }}" 
                                class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors">
                                 Dashboard
                             </a>
@@ -197,11 +197,11 @@
                         </div>
                     @else
                         <div class="flex gap-2">
-                            <a href="{{ route('login') }}" wire:navigate
+                            <a href="{{ route('login') }}" 
                                class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors">
                                 Log In
                             </a>
-                            <a href="{{ route('register') }}" wire:navigate
+                            <a href="{{ route('register') }}" 
                                class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm font-semibold rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
                                 Sign Up
                             </a>
