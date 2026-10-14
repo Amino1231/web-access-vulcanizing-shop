@@ -11,11 +11,21 @@
         </div>
 
         @php $period = $this->period; @endphp
-        <div class="rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-right">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">{{ $period[2] }}</p>
-            <p class="text-xs font-semibold text-slate-700 dark:text-gray-300">
-                {{ $period[0]->format('M d, Y') }} → {{ $period[1]->format('M d, Y') }}
-            </p>
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
+            <div class="rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-right">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">{{ $period[2] }}</p>
+                <p class="text-xs font-semibold text-slate-700 dark:text-gray-300">
+                    {{ $period[0]->format('M d, Y') }} → {{ $period[1]->format('M d, Y') }}
+                </p>
+            </div>
+
+            <a href="{{ route('owner.reports.pdf', ['range' => $range, 'from' => $from, 'to' => $to]) }}"
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF5E14] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-orange-500/30 transition hover:bg-[#D94E10]">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3" />
+                </svg>
+                Download PDF
+            </a>
         </div>
     </div>
 

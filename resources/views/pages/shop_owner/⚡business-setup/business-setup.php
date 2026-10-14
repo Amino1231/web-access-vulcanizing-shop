@@ -20,12 +20,16 @@ new #[Layout('layouts.shop_owner')] class extends Component
     public string $phone = '';
     public string $address = '';
 
+    public ?float $latitude = null;
+    public ?float $longitude = null;
+
     public $logo;
     public ?string $existingLogo = null;
 
     public array $business_hours = [];
     public array $permit_documents = [];
     public array $existingAttachments = [];
+    public array $attachmentsToDelete = [];
 
     public bool $business_setup_completed = false;
 
@@ -43,6 +47,8 @@ new #[Layout('layouts.shop_owner')] class extends Component
             $this->shop_email      = (string) ($tenant->email ?? '');
             $this->phone           = (string) ($tenant->phone ?? '');
             $this->address         = (string) ($tenant->address ?? '');
+            $this->latitude        = $tenant->latitude  !== null ? (float) $tenant->latitude  : null;
+            $this->longitude       = $tenant->longitude !== null ? (float) $tenant->longitude : null;
             $this->existingLogo    = $tenant->logo ?: null;
             $this->business_hours  = is_array($tenant->business_hours)
                 ? $tenant->business_hours
@@ -55,6 +61,36 @@ new #[Layout('layouts.shop_owner')] class extends Component
         }
     }
 
+    // ─────────────────────────────────────────
+    // Map / location callbacks
+    // ─────────────────────────────────────────
+
+    public function setLatLng(float $lat, float $lng): void
+    {
+        $this->latitude  = round($lat, 7);
+        $this->longitude = round($lng, 7);
+        $this->resetValidation(['latitude', 'longitude']);
+    }
+
+    public function clearLatLng(): void
+    {
+        $this->latitude  = null;
+        $this->longitude = null;
+    }
+
+    public function setAddressFromMap(string $address): void
+    {
+        $clean = trim(preg_replace('/\s+/u', ' ', strip_tags($address)) ?? '');
+
+        if ($clean !== '' && mb_strlen($clean) <= 500) {
+            $this->address = $clean;
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // Save
+    // ─────────────────────────────────────────
+
     public function save(): void
     {
         $user = Auth::user();
@@ -63,18 +99,43 @@ new #[Layout('layouts.shop_owner')] class extends Component
             abort(403, 'Unauthorized');
         }
 
+        // Permit documents required only when the shop has no existing permit on file
+        $permitRule = empty($this->existingAttachments) ? 'required' : 'nullable';
+
         $this->validate([
-            'shop_name'               => ['required', 'string', 'min:2', 'max:255'],
-            'shop_email'              => ['required', 'email', 'max:255'],
-            'phone'                   => ['required', 'string', 'min:7', 'max:30'],
-            'address'                 => ['required', 'string', 'min:10', 'max:500'],
-            'logo'                    => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
-            'business_hours'          => ['nullable', 'array'],
-            'business_hours.*.open'   => ['nullable', 'string'],
-            'business_hours.*.close'  => ['nullable', 'string'],
-            'permit_documents'        => ['nullable', 'array', 'max:5'],
-            'permit_documents.*'      => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4048'],
+            'shop_name'              => ['required', 'string', 'min:2', 'max:255'],
+            'shop_email'             => ['required', 'email', 'max:255'],
+            'phone'                  => ['required', 'string', 'min:7', 'max:30'],
+            'address'                => ['required', 'string', 'min:10', 'max:500'],
+            'latitude'               => ['required', 'numeric', 'between:-90,90'],
+            'longitude'              => ['required', 'numeric', 'between:-180,180'],
+            'logo'                   => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'business_hours'         => ['nullable', 'array'],
+            'business_hours.*.open'  => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
+            'business_hours.*.close' => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
+            'permit_documents'       => [$permitRule, 'array', 'min:1', 'max:5'],
+            'permit_documents.*'     => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4048'],
+        ], [
+            'latitude.required'         => 'Drop a pin on the map to set your shop location.',
+            'longitude.required'        => 'Drop a pin on the map to set your shop location.',
+            'latitude.between'          => 'Latitude must be between -90 and 90.',
+            'longitude.between'         => 'Longitude must be between -180 and 180.',
+            'permit_documents.required' => 'Upload at least one business permit or document for verification.',
+            'permit_documents.min'      => 'Upload at least one business permit or document for verification.',
+            'permit_documents.*.mimes'  => 'Permits must be PDF, JPG, PNG, or WEBP files.',
+            'permit_documents.*.max'    => 'Each permit file must be 4 MB or smaller.',
         ]);
+
+        // ─── Hours sanity: close must be after open ───
+        foreach ($this->business_hours as $day => $hours) {
+            $open  = $hours['open']  ?? null;
+            $close = $hours['close'] ?? null;
+
+            if ($open && $close && $open === $close) {
+                $this->addError("business_hours.{$day}.close", "{$day}: open and close can't be the same.");
+                return;
+            }
+        }
 
         $wasResubmission = false;
 
@@ -125,6 +186,8 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 'phone'                    => trim(strip_tags($this->phone)),
                 'email'                    => strtolower(trim($this->shop_email)),
                 'address'                  => trim(strip_tags($this->address)),
+                'latitude'                 => $this->latitude,
+                'longitude'                => $this->longitude,
                 'logo'                     => $finalLogo,
                 'business_hours'           => $this->normalizeBusinessHours($this->business_hours),
                 'attachment'               => $finalAttachments ?: null,
@@ -144,11 +207,19 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 $user->tenants()->syncWithoutDetaching([$newTenant->id]);
                 session(['active_tenant_id' => $newTenant->id]);
             }
+
+            // ─── Deferred attachment deletion ──────
+            foreach ($this->attachmentsToDelete as $path) {
+                if ($path && Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
         });
 
         // Clear temp uploads
-        $this->logo             = null;
-        $this->permit_documents = [];
+        $this->logo                 = null;
+        $this->permit_documents     = [];
+        $this->attachmentsToDelete  = [];
         $this->resetValidation();
 
         session()->flash(
@@ -201,11 +272,14 @@ new #[Layout('layouts.shop_owner')] class extends Component
             return;
         }
 
-        $path = $this->existingAttachments[$index];
-        if ($path) Storage::disk('public')->delete($path);
+        // Queue for deletion — actual delete happens on save()
+        $this->attachmentsToDelete[] = $this->existingAttachments[$index];
 
         unset($this->existingAttachments[$index]);
         $this->existingAttachments = array_values($this->existingAttachments);
+
+        $this->resetValidation('permit_documents');
+        $this->resetValidation('permit_documents.*');
     }
 
     // ─────────────────────────────────────────
@@ -260,5 +334,44 @@ new #[Layout('layouts.shop_owner')] class extends Component
         }
 
         return $slots;
+    }
+
+    // ─────────────────────────────────────────
+    // Phone normalization
+    // ─────────────────────────────────────────
+
+    public function updatedPhone(string $value): void
+    {
+        $normalized = $this->normalizePhone($value);
+
+        if ($normalized !== '' && $normalized !== $value) {
+            $this->phone = $normalized;
+        }
+    }
+
+    /**
+     * Normalize a Philippine phone number to "+63 9XX XXXX XXX".
+     * Accepts: +639XXXXXXXXX, 639XXXXXXXXX, 09XXXXXXXXX, 9XXXXXXXXX, and
+     * with spaces / dashes / dots / parens in any position.
+     */
+    protected function normalizePhone(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', $value);
+
+        if ($digits === null || $digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '63') && strlen($digits) === 12) {
+            $digits = substr($digits, 2);
+        } elseif (str_starts_with($digits, '0') && strlen($digits) === 11) {
+            $digits = substr($digits, 1);
+        }
+
+        if (strlen($digits) !== 10 || ! str_starts_with($digits, '9')) {
+            return $digits;
+        }
+
+        return '+63 ' . substr($digits, 0, 3) . ' ' . substr($digits, 3, 4) . ' ' . substr($digits, 7, 3);
     }
 };

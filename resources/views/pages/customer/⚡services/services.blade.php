@@ -201,7 +201,7 @@
                             @endphp
 
                             @if ($post)
-                                <a href="{{ route('customer.services.book', $post->id) }}" wire:navigate
+                                <a href="{{ route('customer.services.book', $post->id) }}" 
                                    class="inline-flex items-center gap-1.5 rounded-xl bg-[#FF5E14] px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-orange-500/30 transition hover:bg-[#D94E10]">
                                     Book
                                     <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">

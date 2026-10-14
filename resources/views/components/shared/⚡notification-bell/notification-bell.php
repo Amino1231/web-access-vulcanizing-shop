@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -53,6 +54,12 @@ new class extends Component
     public function clearAll(): void
     {
         Auth::user()?->notifications()->delete();
+        unset($this->unreadCount, $this->notifications);
+    }
+
+    #[On('notification-received')]
+    public function onNotificationReceived(): void
+    {
         unset($this->unreadCount, $this->notifications);
     }
 };

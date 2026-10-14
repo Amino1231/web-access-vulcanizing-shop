@@ -90,16 +90,21 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->group(function () {
     Route::livewire('/products/create', 'pages::shop_owner.create-product-post')->name('owner.product_create');
     Route::livewire('/products', 'pages::shop_owner.product-post-table')->name('owner.products');
     Route::livewire('/products/{product}/edit', 'pages::shop_owner.update-product-post')->name('owner.product_edit');
+    Route::livewire('/categories', 'pages::shop_owner.category-management')->name('owner.categories');
+    Route::livewire('/inventory', 'pages::shop_owner.inventory-management')->name('owner.inventory');
+
+    Route::livewire('/services/create', 'pages::shop_owner.create-service-post')->name('owner.service_create');
+    Route::livewire('/services', 'pages::shop_owner.service-post-table')->name('owner.services');
+    Route::livewire('/services/{service}/edit', 'pages::shop_owner.update-service-post')->name('owner.service_edit');
+    Route::livewire('/service-categories', 'pages::shop_owner.service-category-management')->name('owner.service_categories');
 
     Route::livewire('/appointments', 'pages::shop_owner.appointment-management')->name('owner.appointments');
     Route::livewire('/roadside', 'pages::shop_owner.roadside')->name('owner.roadside');
 
-    Route::livewire('/categories', 'pages::shop_owner.category-management')->name('owner.categories');
-    Route::livewire('/inventory', 'pages::shop_owner.inventory-management')->name('owner.inventory');
-
     Route::livewire('/brands', 'pages::shop_owner.brands')->name('owner.brands');
 
     Route::livewire('/reports', 'pages::shop_owner.reports')->name('owner.reports');
+    Route::get('/reports/pdf', [\App\Http\Controllers\OwnerReportController::class, 'sales'])->name('owner.reports.pdf');
 
     Route::livewire('/employees', 'pages::shop_owner.employees')->name('owner.employees');
     Route::livewire('/employees/{employee}/schedule', 'pages::shop_owner.employee-schedule')->name('owner.employees.schedule');

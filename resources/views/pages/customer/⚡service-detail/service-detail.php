@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -26,7 +27,12 @@ new #[Layout('layouts.customer')] class extends Component
 
     public string $selectedTime = '';
 
-    public ?int $selectedVehicle = null;
+    // ─── Vehicle fields (all optional, created inline on booking) ───
+    public string $plateNumber = '';
+    public string $vehicleType = '';
+    public string $brand = '';
+    public string $model = '';
+    public string $yearModel = '';
 
     public ?int $selectedEmployee = null;
 
@@ -60,19 +66,23 @@ new #[Layout('layouts.customer')] class extends Component
     }
 
     #[Computed]
-    public function vehicles()
+    public function vehicleTypes(): array
     {
-        return Vehicle::query()
-            ->where('customer_id', Auth::id())
-            ->orderBy('plate_number')
-            ->get(['id', 'plate_number', 'brand', 'model', 'vehicle_type']);
+        return [
+            'motorcycle' => 'Motorcycle',
+            'bicycle'    => 'Bicycle',
+            'ebike'      => 'E-bike',
+            'sedan'      => 'Sedan',
+            'suv'        => 'SUV',
+            'van'        => 'Van',
+            'pickup'     => 'Pickup',
+            'truck'      => 'Truck',
+            'tricycle'   => 'Tricycle',
+            'bus'        => 'Bus',
+            'other'      => 'Other',
+        ];
     }
 
-    /**
-     * Employees eligible for the currently selected date+time.
-     * If date or time isn't picked yet → returns ALL active employees.
-     * Once picked → only employees whose schedule covers the service window.
-     */
     #[Computed]
     public function employees()
     {
@@ -86,7 +96,7 @@ new #[Layout('layouts.customer')] class extends Component
             ->where('is_active', true);
 
         if ($this->selectedDate && $this->selectedTime) {
-            $dayIso = Carbon::parse($this->selectedDate)->dayOfWeekIso; // 1-7
+            $dayIso = Carbon::parse($this->selectedDate)->dayOfWeekIso;
             $start = $this->selectedTime;
             $duration = $post->service?->duration_minutes ?? 30;
             $end = Carbon::parse($this->selectedDate.' '.$this->selectedTime)
@@ -103,14 +113,6 @@ new #[Layout('layouts.customer')] class extends Component
         return $query->orderBy('name')->get(['id', 'name', 'position']);
     }
 
-    /**
-     * Available time slots for the currently selected date.
-     *
-     * IMPORTANT: this method is called `timeSlots()` (not `slots()`)
-     * because `slots` is a reserved property name inside Livewire —
-     * using `$this->slots` silently returns Livewire's internal
-     * blade-slot container instead of the computed array.
-     */
     #[Computed]
     public function timeSlots(): array
     {
@@ -122,9 +124,8 @@ new #[Layout('layouts.customer')] class extends Component
         $start = Carbon::parse($this->selectedDate.' 08:00');
         $end = Carbon::parse($this->selectedDate.' 18:00');
 
-        $dayIso = Carbon::parse($this->selectedDate)->dayOfWeekIso; // 1-7
+        $dayIso = Carbon::parse($this->selectedDate)->dayOfWeekIso;
 
-        // Existing appointments for that day
         $booked = Appointment::query()
             ->where('tenant_id', $post->tenant_id)
             ->whereDate('start_time', $this->selectedDate)
@@ -133,12 +134,10 @@ new #[Layout('layouts.customer')] class extends Component
             ->map(fn ($t) => Carbon::parse($t)->format('H:i'))
             ->all();
 
-        // Does this shop use the employee system at all?
         $hasEmployees = Employee::where('tenant_id', $post->tenant_id)
             ->where('is_active', true)
             ->exists();
 
-        // If yes, load all active employee shifts for this weekday
         $daySchedules = collect();
         if ($hasEmployees) {
             $daySchedules = Schedule::query()
@@ -164,8 +163,6 @@ new #[Layout('layouts.customer')] class extends Component
             $isBooked = in_array($slotStart, $booked, true);
             $isPast = $cursor->isPast();
 
-            // Only enforce staff-availability when the shop actually has employees.
-            // A shop with zero employees keeps working as before.
             $hasStaff = true;
             if ($hasEmployees) {
                 $hasStaff = $daySchedules->contains(function ($s) use ($slotStart, $slotEnd) {
@@ -345,10 +342,22 @@ new #[Layout('layouts.customer')] class extends Component
 
     public function updatedSelectedTime(): void
     {
-        // If the currently selected employee no longer works this window, clear it
         if ($this->selectedEmployee !== null && ! $this->employees->contains('id', $this->selectedEmployee)) {
             $this->selectedEmployee = null;
         }
+    }
+
+    /**
+     * True if the customer typed in any vehicle field.
+     * We only persist a Vehicle row when at least one field is filled.
+     */
+    protected function hasVehicleDetails(): bool
+    {
+        return trim($this->plateNumber) !== ''
+            || $this->vehicleType !== ''
+            || trim($this->brand) !== ''
+            || trim($this->model) !== ''
+            || trim($this->yearModel) !== '';
     }
 
     public function book()
@@ -364,7 +373,11 @@ new #[Layout('layouts.customer')] class extends Component
             $this->validate([
                 'selectedDate' => ['required', 'date', 'after_or_equal:today'],
                 'selectedTime' => ['required', 'string', 'regex:/^\d{2}:\d{2}$/'],
-                'selectedVehicle' => ['nullable', 'integer', 'exists:vehicles,id'],
+                'plateNumber' => ['nullable', 'string', 'max:50'],
+                'vehicleType' => ['nullable', 'string', Rule::in(array_keys($this->vehicleTypes))],
+                'brand' => ['nullable', 'string', 'max:100'],
+                'model' => ['nullable', 'string', 'max:100'],
+                'yearModel' => ['nullable', 'string', 'max:20'],
                 'selectedEmployee' => ['nullable', 'integer', 'exists:employees,id'],
                 'notes' => ['nullable', 'string', 'max:500'],
             ]);
@@ -399,14 +412,6 @@ new #[Layout('layouts.customer')] class extends Component
                 return;
             }
 
-            // ─── Vehicle (must belong to this customer) ────
-            $vehicleId = null;
-            if ($this->selectedVehicle) {
-                $vehicleId = Vehicle::where('customer_id', Auth::id())
-                    ->whereKey($this->selectedVehicle)
-                    ->value('id');
-            }
-
             // ─── Employee (must be assigned + working that window) ────
             $employeeId = null;
             if ($this->selectedEmployee) {
@@ -422,7 +427,22 @@ new #[Layout('layouts.customer')] class extends Component
                 }
             }
 
-            $appointment = DB::transaction(function () use ($post, $start, $end, $vehicleId, $employeeId) {
+            $appointment = DB::transaction(function () use ($post, $start, $end, $employeeId) {
+                // ─── Create vehicle inline (only if any field filled) ───
+                $vehicleId = null;
+                if ($this->hasVehicleDetails()) {
+                    $vehicle = Vehicle::create([
+                        'tenant_id'    => $post->tenant_id,
+                        'customer_id'  => Auth::id(),
+                        'plate_number' => trim($this->plateNumber) ?: null,
+                        'vehicle_type' => $this->vehicleType ?: null,
+                        'brand'        => trim($this->brand) ?: null,
+                        'model'        => trim($this->model) ?: null,
+                        'year_model'   => trim($this->yearModel) ?: null,
+                    ]);
+                    $vehicleId = $vehicle->id;
+                }
+
                 return Appointment::create([
                     'tenant_id' => $post->tenant_id,
                     'customer_id' => Auth::id(),
@@ -449,7 +469,6 @@ new #[Layout('layouts.customer')] class extends Component
             return redirect()->route('customer.appointment_detail', $appointment->id);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Let Livewire show field-level errors normally
             throw $e;
         } catch (\Throwable $e) {
             Log::error('Booking FAILED', [
@@ -465,11 +484,6 @@ new #[Layout('layouts.customer')] class extends Component
         }
     }
 
-    /**
-     * Verify the employee still belongs to the shop, is active,
-     * and their schedule covers the requested window.
-     * Returns the ID or null if invalid.
-     */
     protected function resolveEligibleEmployee(Post $post, Carbon $start, Carbon $end): ?int
     {
         $dayIso = $start->dayOfWeekIso;
@@ -489,10 +503,6 @@ new #[Layout('layouts.customer')] class extends Component
         return $employee?->id;
     }
 
-    /**
-     * True if the shop has no employees (unscheduled shops always pass),
-     * OR at least one active employee works the full window.
-     */
     protected function isSlotStaffed(Post $post, Carbon $start, Carbon $end): bool
     {
         $hasEmployees = Employee::where('tenant_id', $post->tenant_id)

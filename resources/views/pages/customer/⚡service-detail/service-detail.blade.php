@@ -102,8 +102,8 @@
                     default => 'Click to book',
                     };
                     @endphp
-                    <button type="button" wire:click="$set('selectedTime', '{{ $slot['time'] }}')" @disabled(! $slot['available'])
-                        title="{{ $reasonLabel }}"
+                    <button type="button" wire:click="$set('selectedTime', '{{ $slot['time'] }}')" @disabled(!
+                        $slot['available']) title="{{ $reasonLabel }}"
                         class="rounded-lg border px-2 py-2 text-xs font-semibold transition
                     {{ $selectedTime === $slot['time']
                         ? 'border-[#FF5E14] bg-orange-50 text-[#FF5E14]'
@@ -135,19 +135,70 @@
                 @error('selectedTime') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            @if ($this->vehicles->isNotEmpty())
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">Vehicle <span
-                        class="text-slate-400">(optional)</span></label>
-                <select wire:model="selectedVehicle"
-                    class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100">
-                    <option value="">No vehicle selected</option>
-                    @foreach ($this->vehicles as $v)
-                    <option value="{{ $v->id }}">{{ $v->plate_number }} — {{ $v->brand }} {{ $v->model }}</option>
-                    @endforeach
-                </select>
+            {{-- Vehicle details (all optional, created inline) --}}
+            <div
+                class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-slate-50/60 dark:bg-gray-800/30 p-4 sm:p-5 space-y-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Vehicle details</h3>
+                    <p class="mt-0.5 text-xs text-slate-500 dark:text-gray-400">
+                        Optional — fill in what you know. Leave blank if you don't want to specify.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="min-w-0">
+                        <label for="plateNumber"
+                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                            Plate Number <span class="text-slate-400">(optional)</span>
+                        </label>
+                        <input wire:model="plateNumber" id="plateNumber" type="text" placeholder="e.g. ABC 1234"
+                            class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                        @error('plateNumber') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="min-w-0">
+                        <label for="vehicleType"
+                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                            Vehicle Type <span class="text-slate-400">(optional)</span>
+                        </label>
+                        <select wire:model="vehicleType" id="vehicleType"
+                            class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100">
+                            <option value="">Select a type</option>
+                            @foreach ($this->vehicleTypes as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('vehicleType') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="min-w-0">
+                        <label for="brand" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                            Brand <span class="text-slate-400">(optional)</span>
+                        </label>
+                        <input wire:model="brand" id="brand" type="text" placeholder="e.g. Toyota"
+                            class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                        @error('brand') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="min-w-0">
+                        <label for="model" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                            Model <span class="text-slate-400">(optional)</span>
+                        </label>
+                        <input wire:model="model" id="model" type="text" placeholder="e.g. Vios"
+                            class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                        @error('model') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="min-w-0 sm:col-span-2">
+                        <label for="yearModel" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                            Year Model <span class="text-slate-400">(optional)</span>
+                        </label>
+                        <input wire:model="yearModel" id="yearModel" type="text" placeholder="e.g. 2020"
+                            class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                        @error('yearModel') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
             </div>
-            @endif
 
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">

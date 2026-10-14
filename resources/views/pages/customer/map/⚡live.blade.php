@@ -34,7 +34,14 @@ new #[Layout('layouts.customer')] class extends Component
 
     public bool $showRoadsideModal = false;
     public string $roadsideProblemType = 'flat_tire';
-    public ?int $roadsideVehicleId = null;
+
+    // Vehicle details (all optional, created inline on submit)
+    public string $roadsidePlateNumber = '';
+    public string $roadsideVehicleType = '';
+    public string $roadsideBrand = '';
+    public string $roadsideModel = '';
+    public string $roadsideYearModel = '';
+
     public string $roadsideDescription = '';
     public string $roadsideAddress = '';
 
@@ -108,19 +115,6 @@ new #[Layout('layouts.customer')] class extends Component
             ->filter(fn ($s) => in_array($s['status_key'], ['open', 'closing_soon'], true))
             ->sortBy('distance')
             ->first();
-    }
-
-    #[Computed]
-    public function vehicles()
-    {
-        if (! Auth::check()) {
-            return collect();
-        }
-
-        return Vehicle::query()
-            ->where('customer_id', Auth::id())
-            ->orderBy('plate_number')
-            ->get(['id', 'plate_number', 'brand', 'model']);
     }
 
     // ─────────────────────────────────────────
@@ -204,6 +198,36 @@ new #[Layout('layouts.customer')] class extends Component
         ];
     }
 
+    public function vehicleTypes(): array
+    {
+        return [
+            'motorcycle' => 'Motorcycle',
+            'bicycle'    => 'Bicycle',
+            'ebike'      => 'E-bike',
+            'sedan'      => 'Sedan',
+            'suv'        => 'SUV',
+            'van'        => 'Van',
+            'pickup'     => 'Pickup',
+            'truck'      => 'Truck',
+            'tricycle'   => 'Tricycle',
+            'bus'        => 'Bus',
+            'other'      => 'Other',
+        ];
+    }
+
+    /**
+     * True if the customer typed in any vehicle field.
+     * We only persist a Vehicle row when at least one field is filled.
+     */
+    protected function hasRoadsideVehicleDetails(): bool
+    {
+        return trim($this->roadsidePlateNumber) !== ''
+            || $this->roadsideVehicleType !== ''
+            || trim($this->roadsideBrand) !== ''
+            || trim($this->roadsideModel) !== ''
+            || trim($this->roadsideYearModel) !== '';
+    }
+
     public function openRoadsideModal(): void
     {
         if (! Auth::check()) {
@@ -222,11 +246,15 @@ new #[Layout('layouts.customer')] class extends Component
         }
 
         $this->resetValidation();
-        $this->roadsideProblemType = 'flat_tire';
-        $this->roadsideVehicleId   = null;
-        $this->roadsideDescription = '';
-        $this->roadsideAddress     = '';
-        $this->showRoadsideModal   = true;
+        $this->roadsideProblemType  = 'flat_tire';
+        $this->roadsidePlateNumber  = '';
+        $this->roadsideVehicleType  = '';
+        $this->roadsideBrand        = '';
+        $this->roadsideModel        = '';
+        $this->roadsideYearModel    = '';
+        $this->roadsideDescription  = '';
+        $this->roadsideAddress      = '';
+        $this->showRoadsideModal    = true;
     }
 
     public function closeRoadsideModal(): void
@@ -244,7 +272,11 @@ new #[Layout('layouts.customer')] class extends Component
 
         $this->validate([
             'roadsideProblemType' => ['required', 'string', 'in:' . implode(',', array_keys($this->roadsideProblemTypes()))],
-            'roadsideVehicleId'   => ['nullable', 'integer', 'exists:vehicles,id'],
+            'roadsidePlateNumber' => ['nullable', 'string', 'max:50'],
+            'roadsideVehicleType' => ['nullable', 'string', 'in:' . implode(',', array_keys($this->vehicleTypes()))],
+            'roadsideBrand'       => ['nullable', 'string', 'max:100'],
+            'roadsideModel'       => ['nullable', 'string', 'max:100'],
+            'roadsideYearModel'   => ['nullable', 'string', 'max:20'],
             'roadsideDescription' => ['nullable', 'string', 'max:500'],
             'roadsideAddress'     => ['nullable', 'string', 'max:255'],
         ]);
@@ -261,14 +293,22 @@ new #[Layout('layouts.customer')] class extends Component
             return;
         }
 
-        $vehicleId = null;
-        if ($this->roadsideVehicleId) {
-            $vehicleId = Vehicle::where('customer_id', Auth::id())
-                ->whereKey($this->roadsideVehicleId)
-                ->value('id');
-        }
+        $request = DB::transaction(function () use ($nearest) {
+            // ─── Create vehicle inline (only if any field filled) ───
+            $vehicleId = null;
+            if ($this->hasRoadsideVehicleDetails()) {
+                $vehicle = Vehicle::create([
+                    'tenant_id'    => $nearest['id'],
+                    'customer_id'  => Auth::id(),
+                    'plate_number' => trim($this->roadsidePlateNumber) ?: null,
+                    'vehicle_type' => $this->roadsideVehicleType ?: null,
+                    'brand'        => trim($this->roadsideBrand) ?: null,
+                    'model'        => trim($this->roadsideModel) ?: null,
+                    'year_model'   => trim($this->roadsideYearModel) ?: null,
+                ]);
+                $vehicleId = $vehicle->id;
+            }
 
-        $request = DB::transaction(function () use ($nearest, $vehicleId) {
             return RoadSideRequest::create([
                 'tenant_id'      => $nearest['id'],
                 'customer_id'    => Auth::id(),
@@ -286,11 +326,15 @@ new #[Layout('layouts.customer')] class extends Component
 
         $request->tenant?->user?->notify(new RoadsideRequested($request));
 
-        $this->showRoadsideModal   = false;
-        $this->roadsideProblemType = 'flat_tire';
-        $this->roadsideVehicleId   = null;
-        $this->roadsideDescription = '';
-        $this->roadsideAddress     = '';
+        $this->showRoadsideModal    = false;
+        $this->roadsideProblemType  = 'flat_tire';
+        $this->roadsidePlateNumber  = '';
+        $this->roadsideVehicleType  = '';
+        $this->roadsideBrand        = '';
+        $this->roadsideModel        = '';
+        $this->roadsideYearModel    = '';
+        $this->roadsideDescription  = '';
+        $this->roadsideAddress      = '';
 
         unset($this->roadsideRequests, $this->shopTimeContext);
 
@@ -416,7 +460,6 @@ new #[Layout('layouts.customer')] class extends Component
         return number_format($meters / 1000, 1) . ' km';
     }
 };
-
 ?>
 
 <div class="lm-root bg-gray-50 dark:bg-gray-950 min-h-screen">
@@ -985,24 +1028,71 @@ new #[Layout('layouts.customer')] class extends Component
                             @error('roadsideDescription') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
 
-                        {{-- Vehicle --}}
-                        @if ($this->vehicles->isNotEmpty())
-                        <div>
-                            <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
-                                Vehicle <span class="text-slate-400">(optional)</span>
-                            </label>
-                            <select wire:model="roadsideVehicleId"
-                                    class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20">
-                                <option value="">Not specified</option>
-                                @foreach ($this->vehicles as $v)
-                                    <option value="{{ $v->id }}">
-                                        {{ $v->plate_number }} — {{ trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) ?: 'Vehicle' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('roadsideVehicleId') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                        {{-- Vehicle details (all optional, created inline on submit) --}}
+                        <div class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/40 p-4 space-y-4">
+                            <div>
+                                <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Vehicle details</h4>
+                                <p class="mt-0.5 text-xs text-slate-500 dark:text-gray-400">
+                                    Optional — fill in what you know.
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div class="min-w-0">
+                                    <label for="roadsidePlateNumber" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Plate Number <span class="text-slate-400">(optional)</span>
+                                    </label>
+                                    <input wire:model="roadsidePlateNumber" id="roadsidePlateNumber" type="text"
+                                           placeholder="e.g. ABC 1234"
+                                           class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20" />
+                                    @error('roadsidePlateNumber') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="min-w-0">
+                                    <label for="roadsideVehicleType" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Vehicle Type <span class="text-slate-400">(optional)</span>
+                                    </label>
+                                    <select wire:model="roadsideVehicleType" id="roadsideVehicleType"
+                                            class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20">
+                                        <option value="">Select a type</option>
+                                        @foreach ($this->vehicleTypes() as $value => $label)
+                                            <option value="{{ $value }}">{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('roadsideVehicleType') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="min-w-0">
+                                    <label for="roadsideBrand" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Brand <span class="text-slate-400">(optional)</span>
+                                    </label>
+                                    <input wire:model="roadsideBrand" id="roadsideBrand" type="text"
+                                           placeholder="e.g. Toyota"
+                                           class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20" />
+                                    @error('roadsideBrand') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="min-w-0">
+                                    <label for="roadsideModel" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Model <span class="text-slate-400">(optional)</span>
+                                    </label>
+                                    <input wire:model="roadsideModel" id="roadsideModel" type="text"
+                                           placeholder="e.g. Vios"
+                                           class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20" />
+                                    @error('roadsideModel') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="min-w-0 sm:col-span-2">
+                                    <label for="roadsideYearModel" class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Year Model <span class="text-slate-400">(optional)</span>
+                                    </label>
+                                    <input wire:model="roadsideYearModel" id="roadsideYearModel" type="text"
+                                           placeholder="e.g. 2020"
+                                           class="block w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-500/20" />
+                                    @error('roadsideYearModel') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
                         </div>
-                        @endif
 
                         {{-- Landmark --}}
                         <div>

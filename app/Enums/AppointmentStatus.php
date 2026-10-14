@@ -5,6 +5,8 @@ namespace App\Enums;
 enum AppointmentStatus: string
 {
     case Scheduled  = 'scheduled';
+    case Assigned   = 'assigned';
+    case Accepted   = 'accepted';
     case Confirmed  = 'confirmed';
     case InProgress = 'in_progress';
     case Completed  = 'completed';
@@ -15,6 +17,8 @@ enum AppointmentStatus: string
     {
         return match ($this) {
             self::Scheduled  => 'Scheduled',
+            self::Assigned   => 'Assigned',
+            self::Accepted   => 'Accepted',
             self::Confirmed  => 'Confirmed',
             self::InProgress => 'In progress',
             self::Completed  => 'Completed',
@@ -27,6 +31,8 @@ enum AppointmentStatus: string
     {
         return match ($this) {
             self::Scheduled  => 'slate',
+            self::Assigned   => 'blue',
+            self::Accepted   => 'indigo',
             self::Confirmed  => 'blue',
             self::InProgress => 'amber',
             self::Completed  => 'emerald',
@@ -42,6 +48,16 @@ enum AppointmentStatus: string
                 'bg'   => 'bg-slate-100 dark:bg-gray-800',
                 'text' => 'text-slate-700 dark:text-gray-300',
                 'dot'  => 'bg-slate-500',
+            ],
+            self::Assigned => [
+                'bg'   => 'bg-blue-50 dark:bg-blue-500/10',
+                'text' => 'text-blue-700 dark:text-blue-300',
+                'dot'  => 'bg-blue-500',
+            ],
+            self::Accepted => [
+                'bg'   => 'bg-indigo-50 dark:bg-indigo-500/10',
+                'text' => 'text-indigo-700 dark:text-indigo-300',
+                'dot'  => 'bg-indigo-500',
             ],
             self::Confirmed => [
                 'bg'   => 'bg-blue-50 dark:bg-blue-500/10',
@@ -73,17 +89,32 @@ enum AppointmentStatus: string
 
     public function isActive(): bool
     {
-        return in_array($this, [self::Scheduled, self::Confirmed, self::InProgress], true);
+        return in_array($this, [
+            self::Scheduled,
+            self::Assigned,
+            self::Accepted,
+            self::Confirmed,
+            self::InProgress,
+        ], true);
     }
 
     public function isFinished(): bool
     {
-        return in_array($this, [self::Completed, self::Cancelled, self::NoShow], true);
+        return in_array($this, [
+            self::Completed,
+            self::Cancelled,
+            self::NoShow,
+        ], true);
     }
 
     public function canBeCancelled(): bool
     {
-        return in_array($this, [self::Scheduled, self::Confirmed], true);
+        return in_array($this, [
+            self::Scheduled,
+            self::Assigned,
+            self::Accepted,
+            self::Confirmed,
+        ], true);
     }
 
     public static function options(): array

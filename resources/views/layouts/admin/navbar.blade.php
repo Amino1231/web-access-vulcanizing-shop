@@ -67,23 +67,6 @@
                 Users
             </a>
 
-            {{-- Reports --}}
-            <a href="{{ route('admin.reports') }}"
-               class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition
-                   {{ request()->routeIs('admin.reports')
-                       ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
-                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100' }}">
-                <span class="flex h-8 w-8 items-center justify-center rounded-lg transition
-                    {{ request()->routeIs('admin.reports')
-                        ? 'bg-[#FF5E14] text-white'
-                        : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-900 dark:bg-slate-700 dark:text-slate-300 dark:group-hover:bg-slate-600 dark:group-hover:text-slate-100' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                </span>
-                Reports
-            </a>
-
             {{-- Shop approvals --}}
             <a href="{{ route('admin.shop_approval') }}"
                class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition
@@ -116,23 +99,6 @@
                     </svg>
                 </span>
                 All shops
-            </a>
-
-            {{-- Orders --}}
-            <a href="{{ route('admin.orders') }}"
-               class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition
-                   {{ request()->routeIs('admin.orders')
-                       ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
-                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100' }}">
-                <span class="flex h-8 w-8 items-center justify-center rounded-lg transition
-                    {{ request()->routeIs('admin.orders')
-                        ? 'bg-[#FF5E14] text-white'
-                        : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-900 dark:bg-slate-700 dark:text-slate-300 dark:group-hover:bg-slate-600 dark:group-hover:text-slate-100' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                </span>
-                Orders
             </a>
 
             {{-- Reviews --}}

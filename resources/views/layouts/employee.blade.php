@@ -18,19 +18,17 @@
         })();
     </script>
 
-    {{-- Leaflet — free maps, no API key --}}
+    {{-- Leaflet — free maps --}}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
     <style>
-        /* Leaflet dark mode */
         .dark .leaflet-tile { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
         .dark .leaflet-container { background: #0f172a; }
         .dark .leaflet-popup-content-wrapper,
         .dark .leaflet-popup-tip { background: #1e293b; color: #f1f5f9; }
         .dark .leaflet-popup-content a { color: #ff5e14; }
 
-        /* Custom marker animations */
         .marker-pulse { animation: marker-pulse 2s ease-out infinite; }
         @keyframes marker-pulse {
             0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
@@ -38,7 +36,6 @@
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
-        /* Clamp Leaflet z-indexes so they never escape the map box */
         .leaflet-container { z-index: 0 !important; isolation: isolate; }
         .leaflet-pane          { z-index: 1 !important; }
         .leaflet-tile-pane     { z-index: 100 !important; }
@@ -81,7 +78,7 @@
 
     @livewireScripts
 
-    {{-- Pusher + Echo for real-time --}}
+    {{-- Pusher + Echo for real-time notifications --}}
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
     <script>
@@ -91,6 +88,53 @@
             key: '{{ config('broadcasting.connections.pusher.key') }}',
             cluster: '{{ config('broadcasting.connections.pusher.options.cluster') }}',
             forceTLS: true,
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const userId = {{ auth()->id() ?? 'null' }};
+            if (! userId || ! window.Echo) {
+                console.warn('[Notif] Not authenticated or Echo missing');
+                return;
+            }
+
+            console.log('[Notif] Subscribing to: App.Models.User.' + userId);
+
+            window.Echo.private(`App.Models.User.${userId}`)
+                .notification((notification) => {
+                    console.log('[Notif] Received:', notification);
+
+                    // 1. Refresh the bell
+                    window.dispatchEvent(new CustomEvent('livewire-notification', {
+                        detail: notification
+                    }));
+
+                    // 2. Show toast for employee-assigned jobs
+                    if (notification.kind && notification.kind.startsWith('employee.')) {
+                        window.dispatchEvent(new CustomEvent('notification-toast', {
+                            detail: {
+                                title: notification.title || 'New notification',
+                                message: notification.message || '',
+                                urgency: notification.urgency || 'normal',
+                            }
+                        }));
+
+                        // 3. Beep for urgent
+                        if (notification.urgency === 'urgent') {
+                            try {
+                                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                                const osc = ctx.createOscillator();
+                                const gain = ctx.createGain();
+                                osc.connect(gain);
+                                gain.connect(ctx.destination);
+                                osc.frequency.value = 880;
+                                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                                osc.start(ctx.currentTime);
+                                osc.stop(ctx.currentTime + 0.3);
+                            } catch (e) { /* ignore */ }
+                        }
+                    }
+                });
         });
     </script>
 </body>

@@ -1,62 +1,82 @@
 <?php
 
-use App\Enums\OrderStatus;
+use App\Enums\AppointmentStatus;
+use App\Models\Appointment;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\Service;
 use App\Models\Variant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Product Inventory Management
+ * Unified Inventory Management
  * ============================
  *
- * SCOPE: This component ONLY tracks stock for **Products** (physical goods
- * with quantity on hand). Services are intentionally NOT included here —
- * they're managed via:
- *   - Service catalog:  owner.categories / owner.products
- *   - Scheduling:       owner.appointments / owner.employees.schedule
- *   - Capacity:         employee schedules + appointment slots
+ * Two tabs:
+ *   - Products : unit-based stock + movement audit log
+ *   - Services : booking-based utilization + appointment log
  *
- * WHY: Products have finite stock (units). Services have temporal capacity
- * (time slots). Mixing them in one inventory system creates confusion and
- * bad reports. This separation is intentional and aligns with the
- * recommendation to treat Product and Service inventory as DIFFERENT.
+ * Products and services are fundamentally different inventories:
+ *   - Products have finite stock (units on hand)
+ *   - Services have temporal capacity (time slots)
+ *
+ * The tabs keep them separated without splitting into two pages.
  */
 new #[Layout('layouts.shop_owner')] class extends Component
 {
     use WithPagination;
 
-    // ─── Log filters ──────────────────────────
+    #[Url(history: true)]
+    public string $tab = 'products';   // products | services
+
+    // ─── Product log filters ──────────────────
     public string $logSearch = '';
-    public string $logType = '';        // '' | stock_in | stock_out
+    public string $logType = '';
     public string $logFrom = '';
     public string $logTo = '';
     public int $perPage = 15;
 
-    // ─── Adjustment modal ─────────────────────
+    // ─── Product adjustment modal ─────────────
     public bool $showAdjustModal = false;
     public string $productSearch = '';
     public ?int $selectedProductId = null;
     public ?int $selectedVariantId = null;
-    public string $adjustType = 'stock_in';   // stock_in | stock_out
+    public string $adjustType = 'stock_in';
     public int $adjustQuantity = 1;
     public string $adjustReason = '';
 
+    // ─── Service log filters ──────────────────
+    public string $serviceLogSearch = '';
+    public string $serviceLogStatus = '';
+    public string $serviceLogFrom = '';
+    public string $serviceLogTo = '';
+
+    // ─── Stats ────────────────────────────────
     public array $kpis = [];
     public array $chartLabels = [];
     public array $lineSeries = [];
     public array $donutSeries = [];
 
-    public function updatingLogSearch(): void { $this->resetPage(); }
-    public function updatingLogType(): void   { $this->resetPage(); }
-    public function updatingLogFrom(): void   { $this->resetPage(); }
-    public function updatingLogTo(): void     { $this->resetPage(); }
+    public array $serviceKpis = [];
+    public array $serviceChartLabels = [];
+    public array $serviceLineSeries = [];
+    public array $serviceDonutSeries = [];
+
+    public function updatingLogSearch(): void        { $this->resetPage('productPage'); }
+    public function updatingLogType(): void          { $this->resetPage('productPage'); }
+    public function updatingLogFrom(): void          { $this->resetPage('productPage'); }
+    public function updatingLogTo(): void            { $this->resetPage('productPage'); }
+    public function updatingServiceLogSearch(): void { $this->resetPage('servicePage'); }
+    public function updatingServiceLogStatus(): void { $this->resetPage('servicePage'); }
+    public function updatingServiceLogFrom(): void   { $this->resetPage('servicePage'); }
+    public function updatingServiceLogTo(): void     { $this->resetPage('servicePage'); }
 
     #[Computed]
     public function tenantId(): ?int
@@ -69,18 +89,35 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $this->refreshStats();
     }
 
+    public function setTab(string $tab): void
+    {
+        $this->tab = in_array($tab, ['products', 'services'], true) ? $tab : 'products';
+
+        // Reset any cross-tab filters that no longer apply
+        // (optional — remove if you want filters to persist across tabs)
+        // $this->resetPage('productPage');
+        // $this->resetPage('servicePage');
+
+        // Tell the browser to redraw charts after the new tab renders
+        $this->dispatch('tab-changed', tab: $this->tab);
+    }
+
     protected function refreshStats(): void
     {
         $tenantId = $this->tenantId;
 
         if (! $tenantId) {
-            $this->kpis        = [];
-            $this->chartLabels = [];
-            $this->lineSeries  = [];
-            $this->donutSeries = [];
+            $this->kpis = $this->chartLabels = $this->lineSeries = $this->donutSeries = [];
+            $this->serviceKpis = $this->serviceChartLabels = $this->serviceLineSeries = $this->serviceDonutSeries = [];
             return;
         }
 
+        $this->refreshProductStats($tenantId);
+        $this->refreshServiceStats($tenantId);
+    }
+
+    protected function refreshProductStats(int $tenantId): void
+    {
         $products = Product::query()
             ->where('tenant_id', $tenantId)
             ->select(['id', 'name', 'stock', 'low_stock_alert'])
@@ -99,13 +136,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->sum('final_amount');
 
         $this->kpis = [
-            ['label' => 'Product items', 'value' => (string) $totalProducts, 'delta' => 'Catalog', 'tone' => 'orange', 'filter' => ''],
-            ['label' => 'Stock units',   'value' => (string) $totalStock,    'delta' => 'On hand', 'tone' => 'green',  'filter' => ''],
-            ['label' => 'Low stock',     'value' => (string) $lowStockCount, 'delta' => $lowStockCount > 0 ? 'Attention' : 'All good', 'tone' => $lowStockCount > 0 ? 'amber' : 'green', 'filter' => 'low'],
-            ['label' => 'Sales total',   'value' => '₱' . number_format($salesTotal, 2), 'delta' => 'Revenue', 'tone' => 'green', 'filter' => ''],
+            ['label' => 'Product items', 'value' => (string) $totalProducts, 'delta' => 'Catalog', 'tone' => 'orange'],
+            ['label' => 'Stock units',   'value' => (string) $totalStock,    'delta' => 'On hand', 'tone' => 'green'],
+            ['label' => 'Low stock',     'value' => (string) $lowStockCount, 'delta' => $lowStockCount > 0 ? 'Attention' : 'All good', 'tone' => $lowStockCount > 0 ? 'amber' : 'green'],
+            ['label' => 'Sales total',   'value' => '₱' . number_format($salesTotal, 2), 'delta' => 'Revenue', 'tone' => 'green'],
         ];
 
-        // Line chart — 6-month net inventory movement (products only)
         $labels = [];
         $series = [];
         for ($i = 5; $i >= 0; $i--) {
@@ -127,8 +163,65 @@ new #[Layout('layouts.shop_owner')] class extends Component
         ];
     }
 
+    protected function refreshServiceStats(int $tenantId): void
+    {
+        $services = Service::query()
+            ->where('tenant_id', $tenantId)
+            ->select(['id', 'name', 'is_active', 'price'])
+            ->get();
+
+        $totalServices  = $services->count();
+        $activeServices = $services->where('is_active', true)->count();
+        $inactiveServices = max($totalServices - $activeServices, 0);
+
+        $monthStart = now()->startOfMonth();
+
+        $bookingsThisMonth = Appointment::query()
+            ->where('tenant_id', $tenantId)
+            ->where('created_at', '>=', $monthStart)
+            ->count();
+
+        $completedThisMonth = Appointment::query()
+            ->where('tenant_id', $tenantId)
+            ->where('status', AppointmentStatus::Completed->value)
+            ->where('updated_at', '>=', $monthStart)
+            ->count();
+
+        $serviceRevenue = (float) \App\Models\SaleItem::query()
+            ->whereNotNull('service_id')
+            ->whereHas('sale', fn ($q) => $q->where('tenant_id', $tenantId)->whereIn('status', ['paid', 'completed']))
+            ->sum('subtotal');
+
+        $this->serviceKpis = [
+            ['label' => 'Services offered', 'value' => (string) $totalServices, 'delta' => 'Catalog', 'tone' => 'orange'],
+            ['label' => 'Active services',  'value' => (string) $activeServices, 'delta' => $activeServices === $totalServices ? 'All live' : 'Some offline', 'tone' => 'green'],
+            ['label' => 'Bookings (mo.)',   'value' => (string) $bookingsThisMonth, 'delta' => $completedThisMonth . ' completed', 'tone' => 'amber'],
+            ['label' => 'Service revenue',  'value' => '₱' . number_format($serviceRevenue, 2), 'delta' => 'Lifetime', 'tone' => 'emerald'],
+        ];
+
+        // 6-month booking trend
+        $labels = [];
+        $series = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $labels[] = $month->format('M');
+            $series[] = (int) Appointment::query()
+                ->where('tenant_id', $tenantId)
+                ->whereMonth('created_at', $month->month)
+                ->whereYear('created_at', $month->year)
+                ->count();
+        }
+        $this->serviceChartLabels = $labels;
+        $this->serviceLineSeries  = $series;
+
+        $this->serviceDonutSeries = [
+            ['label' => 'Active services',   'value' => $activeServices,   'color' => '#10b981'],
+            ['label' => 'Inactive services', 'value' => $inactiveServices, 'color' => '#94a3b8'],
+        ];
+    }
+
     // ─────────────────────────────────────────
-    // Log (paginated + filtered)
+    // Product log
     // ─────────────────────────────────────────
 
     #[Computed]
@@ -136,7 +229,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
     {
         $tenantId = $this->tenantId;
         if (! $tenantId) {
-            return Inventory::query()->whereRaw('0=1')->paginate($this->perPage);
+            return Inventory::query()->whereRaw('0=1')->paginate($this->perPage, ['*'], 'productPage');
         }
 
         return Inventory::query()
@@ -155,7 +248,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->when($this->logFrom !== '', fn ($q) => $q->whereDate('created_at', '>=', $this->logFrom))
             ->when($this->logTo !== '',   fn ($q) => $q->whereDate('created_at', '<=', $this->logTo))
             ->latest()
-            ->paginate($this->perPage);
+            ->paginate($this->perPage, ['*'], 'productPage');
     }
 
     public function clearLogFilters(): void
@@ -164,7 +257,50 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $this->logType   = '';
         $this->logFrom   = '';
         $this->logTo     = '';
-        $this->resetPage();
+        $this->resetPage('productPage');
+    }
+
+    // ─────────────────────────────────────────
+    // Service log (appointments)
+    // ─────────────────────────────────────────
+
+    #[Computed]
+    public function serviceLogs()
+    {
+        $tenantId = $this->tenantId;
+        if (! $tenantId) {
+            return Appointment::query()->whereRaw('0=1')->paginate($this->perPage, ['*'], 'servicePage');
+        }
+
+        return Appointment::query()
+            ->where('tenant_id', $tenantId)
+            ->with([
+                'service:id,name,duration_minutes',
+                'customer:id,name,phone',
+                'employee:id,name',
+            ])
+            ->when($this->serviceLogSearch !== '', function ($q) {
+                $term = '%'.$this->serviceLogSearch.'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('appointment_number', 'like', $term)
+                        ->orWhereHas('service', fn ($s) => $s->where('name', 'like', $term))
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', $term));
+                });
+            })
+            ->when($this->serviceLogStatus !== '', fn ($q) => $q->where('status', $this->serviceLogStatus))
+            ->when($this->serviceLogFrom !== '', fn ($q) => $q->whereDate('start_time', '>=', $this->serviceLogFrom))
+            ->when($this->serviceLogTo !== '',   fn ($q) => $q->whereDate('start_time', '<=', $this->serviceLogTo))
+            ->latest('start_time')
+            ->paginate($this->perPage, ['*'], 'servicePage');
+    }
+
+    public function clearServiceLogFilters(): void
+    {
+        $this->serviceLogSearch = '';
+        $this->serviceLogStatus = '';
+        $this->serviceLogFrom   = '';
+        $this->serviceLogTo     = '';
+        $this->resetPage('servicePage');
     }
 
     // ─────────────────────────────────────────
@@ -280,7 +416,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 $isIn    = $this->adjustType === 'stock_in';
                 $remarks = trim($this->adjustReason);
 
-                // ─── Variant adjustment ─────────
                 if ($this->selectedVariantId) {
                     $variant = Variant::where('tenant_id', $tenantId)
                         ->where('product_id', $product->id)
@@ -314,7 +449,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
                     return;
                 }
 
-                // ─── Plain product adjustment ──
                 $before = (int) $product->stock;
 
                 if (! $isIn && $before < $qty) {

@@ -25,13 +25,13 @@ new #[Layout('layouts.shop_owner')] class extends Component
     public ?float $latitude = null;
     public ?float $longitude = null;
 
-    public $logo;                          // new upload
-    public ?string $existingLogo = null;   // current path on disk
+    public $logo;
+    public ?string $existingLogo = null;
     public bool $removeExistingLogo = false;
 
     public array $business_hours = [];
-    public array $permit_documents = [];   // new uploads
-    public array $existingAttachments = []; // current paths
+    public array $permit_documents = [];
+    public array $existingAttachments = [];
 
     public array $dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     public array $timeOptions = [];
@@ -50,7 +50,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         $this->shop_name  = (string) $tenant->name;
         $this->shop_email = (string) $tenant->email;
-        $this->phone      = (string) $tenant->phone;
+        $this->phone      = $this->normalizePhone((string) $tenant->phone);
         $this->address    = (string) $tenant->address;
         $this->latitude   = $tenant->latitude  !== null ? (float) $tenant->latitude  : null;
         $this->longitude  = $tenant->longitude !== null ? (float) $tenant->longitude : null;
@@ -62,16 +62,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $this->existingAttachments = is_array($tenant->attachment) ? $tenant->attachment : [];
     }
 
-    /**
-     * Centralized "current user owns this tenant" query.
-     *
-     * NOTE: The ownership check MUST be wrapped in its own closure.
-     * Otherwise SQL operator precedence turns:
-     *     user_id = X OR EXISTS(...) AND id = Y
-     * into:
-     *     user_id = X OR (EXISTS(...) AND id = Y)
-     * which silently returns the wrong tenant.
-     */
     protected function ownedTenantQuery(int $tenantId)
     {
         $userId = Auth::id();
@@ -107,10 +97,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $this->longitude = null;
     }
 
-    /**
-     * Reverse geocode from browser — the JS calls this with the human-readable
-     * address it got from Nominatim so we can prefill the address textarea.
-     */
     public function setAddressFromMap(string $address): void
     {
         $clean = trim(preg_replace('/\s+/u', ' ', strip_tags($address)) ?? '');
@@ -118,6 +104,40 @@ new #[Layout('layouts.shop_owner')] class extends Component
         if ($clean !== '' && mb_strlen($clean) <= 500) {
             $this->address = $clean;
         }
+    }
+
+    // ─────────────────────────────────────────
+    // Phone normalization
+    // ─────────────────────────────────────────
+
+    public function updatedPhone(string $value): void
+    {
+        $normalized = $this->normalizePhone($value);
+
+        if ($normalized !== '' && $normalized !== $value) {
+            $this->phone = $normalized;
+        }
+    }
+
+    protected function normalizePhone(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', $value);
+
+        if ($digits === null || $digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '63') && strlen($digits) === 12) {
+            $digits = substr($digits, 2);
+        } elseif (str_starts_with($digits, '0') && strlen($digits) === 11) {
+            $digits = substr($digits, 1);
+        }
+
+        if (strlen($digits) !== 10 || ! str_starts_with($digits, '9')) {
+            return $digits;
+        }
+
+        return '+63 ' . substr($digits, 0, 3) . ' ' . substr($digits, 3, 4) . ' ' . substr($digits, 7, 3);
     }
 
     // ─────────────────────────────────────────
@@ -129,6 +149,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $user = Auth::user();
         if (! $user) abort(403, 'Unauthorized');
 
+        // Permit docs are required only when the shop has no docs on file.
+        $permitRule = empty($this->existingAttachments) ? 'required' : 'nullable';
+
+        // Normalize phone before validating
+        $this->phone = $this->normalizePhone($this->phone);
+
         $this->validate([
             'shop_name'              => ['required', 'string', 'min:2', 'max:255'],
             'shop_email'             => [
@@ -137,7 +163,11 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 'max:255',
                 Rule::unique('tenants', 'email')->ignore($this->tenantId),
             ],
-            'phone'                  => ['required', 'string', 'min:7', 'max:30'],
+            'phone'                  => [
+                'required',
+                'string',
+                'regex:/^\+63\s9\d{2}\s\d{4}\s\d{3}$/',
+            ],
             'address'                => ['required', 'string', 'min:10', 'max:500'],
             'latitude'               => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'              => ['nullable', 'numeric', 'between:-180,180'],
@@ -145,15 +175,19 @@ new #[Layout('layouts.shop_owner')] class extends Component
             'business_hours'         => ['nullable', 'array'],
             'business_hours.*.open'  => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
             'business_hours.*.close' => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
-            'permit_documents'       => ['nullable', 'array', 'max:5'],
+            'permit_documents'       => [$permitRule, 'array', 'max:5'],
             'permit_documents.*'     => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4048'],
         ], [
-            'latitude.between'   => 'Latitude must be between -90 and 90.',
-            'longitude.between'  => 'Longitude must be between -180 and 180.',
-            'shop_email.unique'  => 'That email is already used by another shop.',
+            'phone.required'            => 'Enter your business contact number.',
+            'phone.regex'               => 'Use a valid PH mobile number, e.g. +63 977 2854 041.',
+            'latitude.between'          => 'Latitude must be between -90 and 90.',
+            'longitude.between'         => 'Longitude must be between -180 and 180.',
+            'shop_email.unique'         => 'That email is already used by another shop.',
+            'permit_documents.required' => 'Upload at least one business permit or document for verification.',
+            'permit_documents.*.mimes'  => 'Permits must be PDF, JPG, PNG, or WEBP files.',
+            'permit_documents.*.max'    => 'Each permit file must be 4 MB or smaller.',
         ]);
 
-        // ─── Hours sanity: close must be after open ───
         foreach ($this->business_hours as $day => $hours) {
             $open  = $hours['open']  ?? null;
             $close = $hours['close'] ?? null;
@@ -167,7 +201,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
         DB::transaction(function () use ($user) {
             $tenant = $this->ownedTenantQuery($this->tenantId)->firstOrFail();
 
-            // ─── Logo resolution ────────────────
             $oldLogo = $tenant->logo;
             $logoPath = $oldLogo;
 
@@ -179,7 +212,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 $logoPath = null;
             }
 
-            // ─── Attachments: keep existing + append new ─────
             $paths = $this->existingAttachments;
 
             foreach ($this->permit_documents as $file) {
@@ -201,13 +233,11 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ]);
         });
 
-        // Reset upload-specific state; keep loaded values
         $this->logo               = null;
         $this->permit_documents   = [];
         $this->removeExistingLogo = false;
         $this->resetValidation();
 
-        // Reload from DB so the form reflects saved truth
         $this->mount();
 
         session()->flash('success', 'Shop updated successfully.');
@@ -219,14 +249,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
     public function removeLogo(): void
     {
-        // User discarded the *new* upload before saving
         $this->logo = null;
         $this->resetValidation('logo');
     }
 
     public function removeExistingLogo(): void
     {
-        // Mark the existing logo for removal on next save
         $this->existingLogo       = null;
         $this->removeExistingLogo = true;
     }
@@ -253,6 +281,8 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         unset($this->existingAttachments[$index]);
         $this->existingAttachments = array_values($this->existingAttachments);
+
+        $this->resetValidation('permit_documents');
     }
 
     // ─────────────────────────────────────────

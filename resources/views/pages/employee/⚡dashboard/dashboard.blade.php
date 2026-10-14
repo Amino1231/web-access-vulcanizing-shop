@@ -3,7 +3,7 @@
         notifications.push($event.detail);
         setTimeout(() => notifications.shift(), 4000);
      "
-    @if ($this->employee)
+    @if ($employee)
     wire:poll.30s="refresh"
     @endif>
 
@@ -25,7 +25,7 @@
         </template>
     </div>
 
-    @if (!$this->employee)
+    @if (!$employee)
         {{-- Guard: user has 'employee' role but no Employee row --}}
         <div
             class="rounded-2xl border border-dashed border-red-300 dark:border-red-500/40 bg-red-50 dark:bg-red-500/5 p-10 text-center">
@@ -47,26 +47,26 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400">
-                        {{ $this->tenant?->name ?? 'Employee portal' }}
+                        {{ $tenant?->name ?? 'Employee portal' }}
                     </p>
                     <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                         Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 18 ? 'afternoon' : 'evening') }},
-                        {{ explode(' ', trim($this->employee->name))[0] }}
+                        {{ explode(' ', trim($employee->name))[0] }}
                     </h1>
                     <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
-                        {{ now()->format('l, F j, Y') }} · {{ $this->employee->position ?? 'Employee' }}
+                        {{ now()->format('l, F j, Y') }} · {{ $employee->position ?? 'Employee' }}
                     </p>
                 </div>
 
-                <button wire:click="refresh" wire:loading.attr="disabled" wire:target="refresh" type="button"
-                    title="Refresh"
+                <button wire:click="refreshManually" wire:loading.attr="disabled" wire:target="refreshManually"
+                    type="button" title="Refresh"
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-500 dark:text-gray-300 transition hover:bg-slate-50 dark:hover:bg-gray-700 disabled:opacity-60">
-                    <svg wire:loading.remove wire:target="refresh" class="h-4 w-4" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
+                    <svg wire:loading.remove wire:target="refreshManually" class="h-4 w-4" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <svg wire:loading wire:target="refresh" class="h-4 w-4 animate-spin" fill="none"
+                    <svg wire:loading wire:target="refreshManually" class="h-4 w-4 animate-spin" fill="none"
                         viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                             stroke-width="4"></circle>
@@ -80,25 +80,25 @@
                 $statCards = [
                     [
                         'label' => "Today's jobs",
-                        'value' => $this->stats['today'],
+                        'value' => $stats['today'],
                         'tone' => 'text-slate-900 dark:text-white',
                         'accent' => 'bg-slate-300 dark:bg-gray-600',
                     ],
                     [
                         'label' => 'In progress',
-                        'value' => $this->stats['in_progress'],
+                        'value' => $stats['in_progress'],
                         'tone' => 'text-amber-600 dark:text-amber-400',
                         'accent' => 'bg-amber-400',
                     ],
                     [
                         'label' => 'Completed today',
-                        'value' => $this->stats['completed'],
+                        'value' => $stats['completed'],
                         'tone' => 'text-emerald-600 dark:text-emerald-400',
                         'accent' => 'bg-emerald-400',
                     ],
                     [
                         'label' => 'Active roadside',
-                        'value' => $this->stats['roadside'],
+                        'value' => $stats['roadside'],
                         'tone' => 'text-red-600 dark:text-red-400',
                         'accent' => 'bg-red-400',
                     ],
@@ -129,8 +129,8 @@
                     <div>
                         <h2 class="text-lg font-bold text-slate-900 dark:text-white">Today's appointments</h2>
                         <p class="text-xs text-slate-500 dark:text-gray-400">
-                            {{ $this->todayAppointments->count() }}
-                            {{ $this->todayAppointments->count() === 1 ? 'job' : 'jobs' }} scheduled
+                            {{ $todayAppointments->count() }}
+                            {{ $todayAppointments->count() === 1 ? 'job' : 'jobs' }} scheduled
                         </p>
                     </div>
                     <a href="{{ route('employee.appointments') }}"
@@ -139,7 +139,7 @@
                     </a>
                 </div>
 
-                @forelse ($this->todayAppointments as $appt)
+                @forelse ($todayAppointments as $appt)
                     <x-employee.job-card wire:key="appt-{{ $appt->id }}" :type="'appointment'" :id="$appt->id"
                         :number="$appt->appointment_number" :title="$appt->service?->name ?? 'Service'" :subtitle="$appt->customer?->name ?? 'Customer'" :scheduled-at="$appt->start_time" :status="$appt->status"
                         :href="route('employee.appointment_detail', $appt->id)" />
@@ -167,8 +167,8 @@
                         <div>
                             <h2 class="text-lg font-bold text-slate-900 dark:text-white">Roadside</h2>
                             <p class="text-xs text-slate-500 dark:text-gray-400">
-                                {{ $this->activeRoadside->count() }}
-                                active {{ $this->activeRoadside->count() === 1 ? 'request' : 'requests' }}
+                                {{ $activeRoadside->count() }}
+                                active {{ $activeRoadside->count() === 1 ? 'request' : 'requests' }}
                             </p>
                         </div>
                         <a href="{{ route('employee.roadside') }}"
@@ -177,10 +177,11 @@
                         </a>
                     </div>
 
-                    @forelse ($this->activeRoadside as $job)
+                    @forelse ($activeRoadside as $job)
                         <x-employee.job-card wire:key="road-{{ $job->id }}" :type="'roadside'" :id="$job->id"
-                            :number="$job->request_number" :title="$job->problem_type ?? 'Roadside assistance'" :subtitle="$job->customer?->name ?? 'Customer'" :location="$job->location"
-                            :status="$job->status" :urgency="$job->urgency ?? 'normal'" :href="route('employee.roadside_job_detail', $job->id)" />
+                            :number="$job->request_number" :title="$job->problem_type ?? 'Roadside assistance'" :subtitle="$job->customer?->name ?? 'Customer'"
+                            :location="$job->address" :status="$job->status" :urgency="$job->urgency ?? 'normal'"
+                            :href="route('employee.roadside_job_detail', $job->id)" />
                     @empty
                         <div
                             class="rounded-2xl border border-dashed border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-center">
@@ -194,7 +195,11 @@
                     class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 space-y-3">
                     <h3 class="text-sm font-bold text-slate-900 dark:text-white">Quick actions</h3>
                     <div class="grid gap-2">
-                        @foreach ([['route' => 'employee.appointments', 'label' => 'All appointments'], ['route' => 'employee.roadside', 'label' => 'All roadside jobs'], ['route' => 'employee.profile', 'label' => 'My profile']] as $link)
+                        @foreach ([
+                            ['route' => 'employee.appointments', 'label' => 'All appointments'],
+                            ['route' => 'employee.roadside', 'label' => 'All roadside jobs'],
+                            ['route' => 'employee.profile', 'label' => 'My profile'],
+                        ] as $link)
                             <a href="{{ route($link['route']) }}"
                                 class="flex items-center justify-between rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-4 py-3 text-sm font-semibold text-slate-700 dark:text-gray-200 transition hover:border-[#FF5E14] hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:hover:text-orange-300">
                                 <span>{{ $link['label'] }}</span>

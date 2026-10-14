@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Tenant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -12,7 +11,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
 {
     use WithFileUploads;
 
-    // Account fields
     public string $name = '';
     public string $email = '';
     public ?string $phone = null;
@@ -21,61 +19,91 @@ new #[Layout('layouts.shop_owner')] class extends Component
     public ?string $birth_date = null;
     public $avatar = null;
 
-    // Shop fields
-    public ?int $tenantId = null;
-    public string $shop_name = '';
-    public ?string $shop_email = null;
-    public ?string $shop_phone = null;
-    public ?string $shop_address = null;
-    public $shop_logo = null;
-
     public function mount(): void
     {
         $user = Auth::user();
 
-        $this->name = $user->name;
-        $this->email = $user->email;
-        $this->phone = $user->phone;
-        $this->address = $user->address;
-        $this->gender = $user->gender;
+        $this->name       = (string) $user->name;
+        $this->email      = (string) $user->email;
+        $this->phone      = $this->normalizePhone((string) $user->phone);
+        $this->address    = (string) $user->address;
+        $this->gender     = $user->gender;
         $this->birth_date = $user->birth_date?->format('Y-m-d');
+    }
 
-        $tenant = $user->tenant;
+    // ─────────────────────────────────────────
+    // Phone normalization
+    // ─────────────────────────────────────────
 
-        if ($tenant) {
-            $this->tenantId = $tenant->id;
-            $this->shop_name = $tenant->name;
-            $this->shop_email = $tenant->email;
-            $this->shop_phone = $tenant->phone;
-            $this->shop_address = $tenant->address;
+    public function updatedPhone(string $value): void
+    {
+        $normalized = $this->normalizePhone($value);
+        if ($normalized !== '' && $normalized !== $value) {
+            $this->phone = $normalized;
         }
     }
+
+    protected function normalizePhone(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', $value);
+
+        if ($digits === null || $digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '63') && strlen($digits) === 12) {
+            $digits = substr($digits, 2);
+        } elseif (str_starts_with($digits, '0') && strlen($digits) === 11) {
+            $digits = substr($digits, 1);
+        }
+
+        if (strlen($digits) !== 10 || ! str_starts_with($digits, '9')) {
+            return $digits;
+        }
+
+        return '+63 ' . substr($digits, 0, 3) . ' ' . substr($digits, 3, 4) . ' ' . substr($digits, 7, 3);
+    }
+
+    // ─────────────────────────────────────────
+    // Map callback
+    // ─────────────────────────────────────────
+
+    public function setAddressFromMap(string $address): void
+    {
+        $clean = trim(preg_replace('/\s+/u', ' ', strip_tags($address)) ?? '');
+
+        if ($clean !== '' && mb_strlen($clean) <= 500) {
+            $this->address = $clean;
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // Save
+    // ─────────────────────────────────────────
 
     public function save(): void
     {
         $user = Auth::user();
 
+        // Normalize phone before validating
+        $this->phone = $this->normalizePhone((string) $this->phone);
+
         $validated = $this->validate([
             'name'       => ['required', 'string', 'max:255'],
             'email'      => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone'      => ['nullable', 'string', 'max:11', 'min:11'],
-            'address'    => ['nullable', 'string', 'max:255'],
+            'phone'      => ['nullable', 'string', 'regex:/^\+63\s9\d{2}\s\d{4}\s\d{3}$/'],
+            'address'    => ['nullable', 'string', 'max:500'],
             'gender'     => ['nullable', 'in:male,female,prefer_not_to_say'],
             'birth_date' => ['nullable', 'date', 'before:today'],
             'avatar'     => ['nullable', 'image', 'max:2048'],
-
-            'shop_name'    => [$this->tenantId ? 'required' : 'nullable', 'string', 'max:255'],
-            'shop_email'   => ['nullable', 'email', 'max:255', $this->tenantId ? Rule::unique('tenants', 'email')->ignore($this->tenantId) : 'nullable'],
-            'shop_phone'   => ['nullable', 'string', 'max:11', 'min:11'],
-            'shop_address' => ['nullable', 'string', 'max:255'],
-            'shop_logo'    => ['nullable', 'image', 'max:2048'],
+        ], [
+            'phone.regex' => 'Use a valid PH mobile number, e.g. +63 977 2854 041.',
         ]);
 
-        // Update user account
         $userPayload = [
             'name'       => $validated['name'],
             'email'      => $validated['email'],
-            'phone'      => $validated['phone'],
+            'phone'      => $validated['phone'] ?: null,
             'address'    => $validated['address'],
             'gender'     => $validated['gender'],
             'birth_date' => $validated['birth_date'],
@@ -90,31 +118,9 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         $user->update($userPayload);
 
-        // Update shop, if it exists
-        if ($this->tenantId) {
-            $tenant = Tenant::findOrFail($this->tenantId);
-
-            $tenantPayload = [
-                'name'    => $validated['shop_name'],
-                'email'   => $validated['shop_email'],
-                'phone'   => $validated['shop_phone'],
-                'address' => $validated['shop_address'],
-            ];
-
-            if ($this->shop_logo) {
-                if ($tenant->logo) {
-                    Storage::disk('public')->delete($tenant->logo);
-                }
-                $tenantPayload['logo'] = $this->shop_logo->store('tenant-logos', 'public');
-            }
-
-            $tenant->update($tenantPayload);
-        }
-
-        $this->reset(['avatar', 'shop_logo']);
+        $this->reset(['avatar']);
 
         $this->dispatch('notify', type: 'success', message: 'Profile updated.');
         $this->redirectRoute('owner.profile');
     }
 };
-?>

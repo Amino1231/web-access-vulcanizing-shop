@@ -81,6 +81,7 @@
         </div>
     </div>
 
+
     {{-- Table --}}
     <div
         class="min-w-0 overflow-hidden rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
@@ -282,7 +283,7 @@
             </div>
 
             {{-- Body --}}
-            <form wire:submit="save" class="overflow-y-auto p-6 space-y-4">
+            <form wire:submit="save" class="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
 
                 @error('general')
                 <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $message }}
@@ -314,6 +315,18 @@
                     <input wire:model="phone" type="text" placeholder="+63 912 345 6789"
                         class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-orange-100" />
                     @error('phone') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-gray-300">
+                        Email <span class="text-slate-400">(optional)</span>
+                    </label>
+                    <input wire:model="email" type="email" placeholder="e.g. maria@example.com"
+                        class="w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-orange-400 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-orange-100" />
+                    @error('email') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                    <p class="mt-1.5 text-xs text-slate-500 dark:text-gray-400">
+                        Adding an email lets this employee sign in and take jobs on their own.
+                    </p>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
@@ -405,7 +418,7 @@
             </div>
 
             {{-- Body --}}
-            <div class="overflow-y-auto p-6">
+            <div class="min-h-0 flex-1 overflow-y-auto p-6">
 
                 @if ($errors->any())
                 <div
@@ -490,7 +503,7 @@
                             </tr>
 
                             @error("schedules.{$day}.end")
-                            <tr>
+                            <tr wire:key="sched-error-{{ $day }}">
                                 <td colspan="4" class="bg-red-50 dark:bg-red-500/10 px-3 py-2">
                                     <p class="text-xs text-red-600 dark:text-red-400">
                                         {{ $label }}: {{ $message }}

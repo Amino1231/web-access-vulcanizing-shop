@@ -92,7 +92,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $tenantId = $this->tenantId();
         if (! $tenantId) {
             return [
-                'gross'      => 0.0,
+                'revenue'      => 0.0,
                 'commission' => 0.0,
                 'net'        => 0.0,
                 'sales'      => 0,
@@ -122,7 +122,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
             ->sum('quantity');
 
         return [
-            'gross'      => $gross,
+            'revenue'      => $gross,
             'commission' => $commission,
             'net'        => $net,
             'sales'      => $salesCount,

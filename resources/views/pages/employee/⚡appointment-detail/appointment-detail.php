@@ -1,21 +1,24 @@
 <?php
-// resources/views/livewire/pages/employee/appointment-detail.blade.php
 
+use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Employee;
 use App\Notifications\AppointmentStatusChanged;
 use App\Notifications\JobAcceptedByEmployee;
+use App\Notifications\JobCancelledByEmployee;
 use App\Notifications\JobCompletedByEmployee;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] class extends Component
+new #[Layout('layouts.employee')] #[Title('Appointment · Employee')] class extends Component
 {
-    public Appointment $appointment;
+    #[Locked]
+    public int $appointmentId;
 
     public string $notes = '';
 
@@ -23,14 +26,24 @@ new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] cla
     {
         $this->authorize('view', $appointment);
 
-        $this->appointment = $appointment->load([
+        $this->appointmentId = $appointment->id;
+        $this->notes = (string) ($appointment->notes ?? '');
+    }
+
+    #[Computed]
+    public function appointment(): Appointment
+    {
+        $appointment = Appointment::with([
             'customer:id,name,phone,email',
             'service:id,name,duration_minutes',
             'vehicle:id,brand,model,year_model,plate_number,vehicle_type',
             'employee:id,name,position',
-        ]);
+            'tenant:id,user_id,name,phone,address',  
+        ])->findOrFail($this->appointmentId);
 
-        $this->notes = (string) ($appointment->notes ?? '');
+        $this->authorize('view', $appointment);
+
+        return $appointment;
     }
 
     #[Computed]
@@ -45,14 +58,15 @@ new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] cla
 
         try {
             DB::transaction(function () {
-                $this->appointment->update(['status' => 'accepted']);
+                $this->appointment->update([
+                    'status' => AppointmentStatus::Accepted,
+                ]);
             });
 
             $this->notifyOwnerAccepted();
             $this->notifyCustomer('accepted');
 
             unset($this->appointment);
-            $this->appointment->refresh();
 
             $this->dispatch('notify', type: 'success', message: 'Job accepted.');
         } catch (\Throwable $e) {
@@ -67,11 +81,13 @@ new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] cla
 
         try {
             DB::transaction(function () {
-                $this->appointment->update(['status' => 'in_progress']);
+                $this->appointment->update([
+                    'status' => AppointmentStatus::InProgress,
+                ]);
             });
 
             $this->notifyCustomer('in_progress');
-            $this->appointment->refresh();
+            unset($this->appointment);
 
             $this->dispatch('notify', type: 'success', message: 'Job started.');
         } catch (\Throwable $e) {
@@ -89,14 +105,14 @@ new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] cla
         try {
             DB::transaction(function () {
                 $this->appointment->update([
-                    'status' => 'completed',
+                    'status' => AppointmentStatus::Completed,
                     'notes'  => $this->notes ?: $this->appointment->notes,
                 ]);
             });
 
             $this->notifyOwnerCompleted();
             $this->notifyCustomer('completed');
-            $this->appointment->refresh();
+            unset($this->appointment);
 
             $this->dispatch('notify', type: 'success', message: 'Job completed.');
         } catch (\Throwable $e) {
@@ -111,11 +127,15 @@ new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] cla
 
         try {
             DB::transaction(function () {
-                $this->appointment->update(['status' => 'cancelled']);
+                $this->appointment->update([
+                    'status' => AppointmentStatus::Cancelled,
+                ]);
             });
 
+            $this->notifyOwnerCancelled();
             $this->notifyCustomer('cancelled');
-            $this->appointment->refresh();
+
+            unset($this->appointment);
 
             $this->dispatch('notify', type: 'success', message: 'Job cancelled.');
         } catch (\Throwable $e) {
@@ -136,14 +156,12 @@ new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] cla
             return;
         }
 
-        if (class_exists(JobAcceptedByEmployee::class)) {
-            $owner->notify(new JobAcceptedByEmployee(
-                jobType:      'appointment',
-                jobId:        $this->appointment->id,
-                jobNumber:    $this->appointment->appointment_number,
-                mechanicName: $this->employee?->name ?? 'An employee',
-            ));
-        }
+        $owner->notify(new JobAcceptedByEmployee(
+            jobType:      'appointment',
+            jobId:        $this->appointment->id,
+            jobNumber:    $this->appointment->appointment_number,
+            mechanicName: $this->employee?->name ?? 'An employee',
+        ));
     }
 
     protected function notifyOwnerCompleted(): void
@@ -155,6 +173,27 @@ new #[Layout('layouts.employee')] #[Title('Appointment Detail · Employee')] cla
         }
 
         $owner->notify(new JobCompletedByEmployee(
+            jobType:      'appointment',
+            jobId:        $this->appointment->id,
+            jobNumber:    $this->appointment->appointment_number,
+            employeeName: $this->employee?->name ?? 'An employee',
+        ));
+    }
+
+    protected function notifyOwnerCancelled(): void
+    {
+        $owner = $this->appointment->tenant?->owner;
+
+        if (! $owner) {
+            \Log::warning('Cancel notification skipped: tenant has no owner', [
+                'tenant_id'      => $this->appointment->tenant_id,
+                'appointment_id' => $this->appointment->id,
+            ]);
+
+            return;
+        }
+
+        $owner->notify(new JobCancelledByEmployee(
             jobType:      'appointment',
             jobId:        $this->appointment->id,
             jobNumber:    $this->appointment->appointment_number,

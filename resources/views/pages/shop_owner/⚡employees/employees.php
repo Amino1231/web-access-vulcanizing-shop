@@ -2,8 +2,10 @@
 
 use App\Models\Employee;
 use App\Models\Schedule;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -33,6 +35,8 @@ new #[Layout('layouts.shop_owner')] class extends Component
     public string $name = '';
 
     public string $position = '';
+
+    public string $email = '';
 
     public string $phone = '';
 
@@ -112,13 +116,15 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         return Employee::query()
             ->where('tenant_id', $tenantId)
+            ->with('user:id,name,email')
             ->withCount('schedules')
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
                 $q->where(function ($sub) use ($term) {
                     $sub->where('name', 'like', $term)
                         ->orWhere('position', 'like', $term)
-                        ->orWhere('phone', 'like', $term);
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhereHas('user', fn ($u) => $u->where('email', 'like', $term));
                 });
             })
             ->when($this->statusFilter === 'active', fn ($q) => $q->where('is_active', true))
@@ -145,6 +151,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $this->editingId = null;
         $this->name = '';
         $this->position = '';
+        $this->email = '';
         $this->phone = '';
         $this->commissionRate = '0';
         $this->hiredAt = now()->format('Y-m-d');
@@ -154,7 +161,10 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
     public function openEdit(int $id): void
     {
-        $employee = Employee::where('tenant_id', $this->tenantId())->find($id);
+        $employee = Employee::with('user')
+            ->where('tenant_id', $this->tenantId())
+            ->find($id);
+
         if (! $employee) {
             return;
         }
@@ -163,6 +173,7 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $this->editingId = $employee->id;
         $this->name = (string) $employee->name;
         $this->position = (string) $employee->position;
+        $this->email = (string) ($employee->user?->email ?? '');
         $this->phone = (string) ($employee->phone ?? '');
         $this->commissionRate = (string) ($employee->commission_rate ?? '0');
         $this->hiredAt = $employee->hired_at?->format('Y-m-d') ?? '';
@@ -174,14 +185,27 @@ new #[Layout('layouts.shop_owner')] class extends Component
     {
         $this->showForm = false;
         $this->editingId = null;
+        $this->email = '';
         $this->resetValidation();
     }
 
     public function save(): void
     {
+        // Look up the linked user (if any) *before* validation so we can
+        // ignore their own email in the unique rule.
+        $existingUserId = $this->editingId
+            ? Employee::where('tenant_id', $this->tenantId())
+                ->whereKey($this->editingId)
+                ->value('user_id')
+            : null;
+
         $this->validate([
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'position' => ['required', 'string', 'min:2', 'max:120'],
+            'email' => [
+                'nullable', 'string', 'email', 'max:255',
+                Rule::unique('users', 'email')->ignore($existingUserId),
+            ],
             'phone' => ['nullable', 'string', 'max:30'],
             'commissionRate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'hiredAt' => ['nullable', 'date'],
@@ -204,25 +228,73 @@ new #[Layout('layouts.shop_owner')] class extends Component
             'is_active' => $this->isActive,
         ];
 
-        if ($this->editingId) {
-            $employee = Employee::where('tenant_id', $tenantId)->find($this->editingId);
-            if (! $employee) {
-                $this->closeForm();
-                session()->flash('error', 'Employee not found.');
+        $savedName = $data['name'];
 
-                return;
-            }
+        try {
+            DB::transaction(function () use (&$data, $tenantId, $existingUserId) {
+                $email = trim($this->email) ?: null;
 
-            $employee->update($data);
-            session()->flash('success', "{$employee->name} updated.");
-        } else {
-            $data['tenant_id'] = $tenantId;
-            $employee = Employee::create($data);
-            session()->flash('success', "{$employee->name} added to your team.");
+                if ($email) {
+                    if ($existingUserId) {
+                        // Keep the linked user in sync (name + email).
+                        $user = User::find($existingUserId);
+                        if ($user) {
+                            $user->update([
+                                'name' => $data['name'],
+                                'email' => $email,
+                            ]);
+                            // Self-heal: make sure the role is still attached.
+                            if (! $user->hasRole('employee')) {
+                                $user->assignRole('employee');
+                            }
+                        }
+                    } else {
+                        // Create a login-capable user for this employee.
+                        $user = User::create([
+                            'name' => $data['name'],
+                            'email' => $email,
+                            'password' => Hash::make('password'),
+                            'is_active' => true,
+                        ]);
+                        $user->assignRole('employee');
+                        $data['user_id'] = $user->id;
+                    }
+                } elseif ($existingUserId) {
+                    // Email cleared — detach the user, employee stays.
+                    // We deliberately do NOT remove the role here: the same
+                    // user may still be an employee at another shop, or may
+                    // legitimately hold other roles too.
+                    $data['user_id'] = null;
+                }
+
+                if ($this->editingId) {
+                    $employee = Employee::where('tenant_id', $tenantId)->find($this->editingId);
+                    if (! $employee) {
+                        throw new RuntimeException('Employee not found.');
+                    }
+                    $employee->update($data);
+                } else {
+                    $data['tenant_id'] = $tenantId;
+                    Employee::create($data);
+                }
+            });
+        } catch (Throwable $e) {
+            $this->addError('general', 'Save failed: '.$e->getMessage());
+
+            return;
         }
 
         unset($this->employees, $this->counts);
+
+        $wasEditing = (bool) $this->editingId;
         $this->closeForm();
+
+        session()->flash(
+            'success',
+            $wasEditing
+                ? "{$savedName} updated."
+                : "{$savedName} added to your team."
+        );
     }
 
     // ─────────────────────────────────────────
@@ -255,12 +327,10 @@ new #[Layout('layouts.shop_owner')] class extends Component
         }
 
         $this->resetValidation();
-        $this->scheduleEmployeeId   = $employee->id;
+        $this->scheduleEmployeeId = $employee->id;
         $this->scheduleEmployeeName = $employee->name;
 
-        // Load from DB — clears all days, then enables only what's saved
         $this->loadScheduleFromDatabase();
-
         $this->showSchedule = true;
     }
 
@@ -273,15 +343,10 @@ new #[Layout('layouts.shop_owner')] class extends Component
         $this->resetValidation();
     }
 
-    /**
-     * Clear every day OFF, then flip on ONLY the days that exist in the DB.
-     * Single source of truth for "what's the schedule right now".
-     */
     protected function loadScheduleFromDatabase(): void
     {
         $this->schedules = $this->defaultSchedules();
 
-        // Force every day OFF first
         foreach ($this->schedules as $day => $_) {
             $this->schedules[$day]['enabled'] = false;
         }
@@ -300,8 +365,8 @@ new #[Layout('layouts.shop_owner')] class extends Component
             }
 
             $this->schedules[$day]['enabled'] = true;
-            $this->schedules[$day]['start']   = substr((string) $row->start_time, 0, 5);
-            $this->schedules[$day]['end']     = substr((string) $row->end_time, 0, 5);
+            $this->schedules[$day]['start'] = substr((string) $row->start_time, 0, 5);
+            $this->schedules[$day]['end'] = substr((string) $row->end_time, 0, 5);
         }
     }
 
@@ -331,7 +396,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
             return;
         }
 
-        // Normalize + validate start/end for enabled days
         foreach ($this->schedules as $day => $data) {
             if (empty($data['enabled'])) {
                 continue;
@@ -352,7 +416,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
                 return;
             }
 
-            // Put normalized values back so we insert clean strings
             $this->schedules[$day]['start'] = $start;
             $this->schedules[$day]['end'] = $end;
         }
@@ -383,17 +446,12 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         unset($this->employees, $this->counts);
 
-        // Reload from DB so the form reflects the saved truth, then close
         $this->loadScheduleFromDatabase();
         $this->closeSchedule();
 
         session()->flash('success', "{$employee->name}'s schedule updated.");
     }
 
-    /**
-     * Turn "9:00", "09:00", "09:00:00" into "09:00".
-     * Returns null if not a valid time.
-     */
     protected function normalizeTime(?string $t): ?string
     {
         if (! $t) {
@@ -402,12 +460,10 @@ new #[Layout('layouts.shop_owner')] class extends Component
 
         $t = trim($t);
 
-        // "9:00" → "09:00"
         if (preg_match('/^\d:\d{2}$/', $t)) {
             $t = '0'.$t;
         }
 
-        // "09:00:00" → "09:00"
         if (preg_match('/^(\d{2}:\d{2}):\d{2}$/', $t, $m)) {
             $t = $m[1];
         }
@@ -428,7 +484,6 @@ new #[Layout('layouts.shop_owner')] class extends Component
     {
         $defaults = [];
 
-        // ISO: 1=Monday ... 7=Sunday
         foreach (range(1, 7) as $day) {
             $defaults[$day] = [
                 'enabled' => $day !== 7,
@@ -477,7 +532,30 @@ new #[Layout('layouts.shop_owner')] class extends Component
         }
 
         $name = $employee->name;
-        $employee->delete();
+        $userId = $employee->user_id;
+
+        try {
+            DB::transaction(function () use ($employee, $userId) {
+                // Drop schedules first so we don't leave orphans if the FK isn't cascading.
+                Schedule::where('employee_id', $employee->id)->delete();
+
+                $employee->delete();
+
+                if ($userId) {
+                    // Only remove the login if this was its last employee record.
+                    $stillUsed = Employee::where('user_id', $userId)->exists();
+
+                    if (! $stillUsed) {
+                        User::whereKey($userId)->delete();
+                    }
+                }
+            });
+        } catch (Throwable $e) {
+            $this->cancelDelete();
+            session()->flash('error', 'Delete failed: '.$e->getMessage());
+
+            return;
+        }
 
         unset($this->employees, $this->counts);
         $this->cancelDelete();

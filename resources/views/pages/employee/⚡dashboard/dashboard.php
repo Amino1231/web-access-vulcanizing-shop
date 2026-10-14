@@ -1,91 +1,91 @@
 <?php
 
+namespace App\Livewire\Employee;
+
+use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Employee;
 use App\Models\RoadSideRequest;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Layout('layouts.employee')] #[Title('Dashboard · Employee')] class extends Component
 {
-    /**
-     * Currently logged-in employee (Employee row, not User).
-     * Nullable — user may have role but no Employee row yet.
-     */
-    #[Computed]
-    public function employee(): ?Employee
+    public ?Employee $employee = null;
+    public ?Tenant $tenant = null;
+
+    public array $stats = [
+        'today'       => 0,
+        'in_progress' => 0,
+        'completed'   => 0,
+        'roadside'    => 0,
+    ];
+
+    public $todayAppointments;
+    public $activeRoadside;
+
+    public array $knownAppointmentIds = [];
+    public array $knownRoadsideIds    = [];
+    public bool $bootstrapped         = false;
+
+    public function mount(): void
     {
-        return Auth::user()?->currentEmployee();
+        $this->employee = Auth::user()?->currentEmployee();
+        $this->tenant   = $this->employee?->tenant;
+
+        $this->loadData();
+        $this->bootstrapped = true;
     }
 
-    #[Computed]
-    public function tenant(): ?Tenant
+    public function loadData(): void
     {
-        return $this->employee?->tenant;
-    }
+        $this->stats = ['today' => 0, 'in_progress' => 0, 'completed' => 0, 'roadside' => 0];
+        $this->todayAppointments = collect();
+        $this->activeRoadside    = collect();
 
-    #[Computed]
-    public function scopeIds(): array
-    {
-        $e = $this->employee;
-
-        return [
-            'employee_id' => $e?->id,
-            'tenant_id'   => $e?->tenant_id,
-        ];
-    }
-
-    #[Computed]
-    public function stats(): array
-    {
-        $scope = $this->scopeIds;
-
-        if (! $scope['employee_id'] || ! $scope['tenant_id']) {
-            return ['today' => 0, 'in_progress' => 0, 'completed' => 0, 'roadside' => 0];
+        if (! $this->employee || ! $this->tenant) {
+            return;
         }
 
-        $base = Appointment::query()
-            ->where('tenant_id', $scope['tenant_id'])
-            ->where('employee_id', $scope['employee_id']);
+        $tenantId   = $this->employee->tenant_id;
+        $employeeId = $this->employee->id;
 
-        return [
+        $base = Appointment::query()
+            ->where('tenant_id', $tenantId)
+            ->where('employee_id', $employeeId);
+
+        // ---- Stats ----
+        $this->stats = [
             'today' => (clone $base)
                 ->whereDate('start_time', today())
                 ->count(),
 
             'in_progress' => (clone $base)
-                ->where('status', 'in_progress')
+                ->whereIn('status', [
+                    AppointmentStatus::Accepted->value,
+                    AppointmentStatus::InProgress->value,
+                ])
                 ->count(),
 
             'completed' => (clone $base)
-                ->where('status', 'completed')
+                ->where('status', AppointmentStatus::Completed->value)
                 ->whereDate('updated_at', today())
                 ->count(),
 
             'roadside' => RoadSideRequest::query()
-                ->where('tenant_id', $scope['tenant_id'])
-                ->whereHas('assignments', fn ($q) => $q->where('employee_id', $scope['employee_id']))
-                ->whereIn('status', ['assigned', 'accepted', 'arrived'])
+                ->where('tenant_id', $tenantId)
+                ->whereHas('assignments', fn ($q) => $q->where('employee_id', $employeeId))
+                ->whereIn('status', ['pending', 'accepted'])
                 ->count(),
         ];
-    }
 
-    #[Computed]
-    public function todayAppointments()
-    {
-        $scope = $this->scopeIds;
-
-        if (! $scope['employee_id'] || ! $scope['tenant_id']) {
-            return collect();
-        }
-
-        return Appointment::query()
-            ->where('tenant_id', $scope['tenant_id'])
-            ->where('employee_id', $scope['employee_id'])
+        // ---- Today's appointments ----
+        $this->todayAppointments = Appointment::query()
+            ->where('tenant_id', $tenantId)
+            ->where('employee_id', $employeeId)
             ->whereDate('start_time', today())
             ->with([
                 'customer:id,name,phone',
@@ -94,38 +94,72 @@ new #[Layout('layouts.employee')] #[Title('Dashboard · Employee')] class extend
             ->orderBy('start_time')
             ->limit(10)
             ->get();
-    }
 
-    #[Computed]
-    public function activeRoadside()
-    {
-        $scope = $this->scopeIds;
-
-        if (! $scope['employee_id'] || ! $scope['tenant_id']) {
-            return collect();
-        }
-
-        return RoadSideRequest::query()
-            ->where('tenant_id', $scope['tenant_id'])
-            ->whereHas('assignments', fn ($q) => $q->where('employee_id', $scope['employee_id']))
-            ->whereIn('status', ['assigned', 'accepted', 'arrived'])
+        // ---- Active roadside ----
+        $this->activeRoadside = RoadSideRequest::query()
+            ->where('tenant_id', $tenantId)
+            ->whereHas('assignments', fn ($q) => $q->where('employee_id', $employeeId))
+            ->whereIn('status', ['pending', 'accepted'])
             ->with(['customer:id,name,phone'])
             ->latest()
             ->limit(5)
             ->get();
+
+        $this->detectAndNotifyNewAssignments();
     }
 
+    protected function detectAndNotifyNewAssignments(): void
+    {
+        $freshApptIds = $this->todayAppointments->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $freshRoadIds = $this->activeRoadside->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if ($this->bootstrapped) {
+            $newAppts = array_diff($freshApptIds, $this->knownAppointmentIds);
+            $newRoads = array_diff($freshRoadIds, $this->knownRoadsideIds);
+
+            if (count($newAppts) > 0) {
+                $count = count($newAppts);
+                $this->dispatch(
+                    'notify',
+                    type: 'success',
+                    message: $count === 1
+                        ? 'New appointment assigned to you.'
+                        : "{$count} new appointments assigned to you.",
+                );
+            }
+
+            if (count($newRoads) > 0) {
+                $count = count($newRoads);
+                $this->dispatch(
+                    'notify',
+                    type: 'error',
+                    message: $count === 1
+                        ? 'New roadside request assigned to you.'
+                        : "{$count} new roadside requests assigned to you.",
+                );
+            }
+        }
+
+        $this->knownAppointmentIds = $freshApptIds;
+        $this->knownRoadsideIds    = $freshRoadIds;
+    }
+
+    /**
+     * Background poll — no toast, this is silent.
+     */
     public function refresh(): void
     {
-        unset(
-            $this->employee,
-            $this->tenant,
-            $this->scopeIds,
-            $this->stats,
-            $this->todayAppointments,
-            $this->activeRoadside,
-        );
+        $this->employee = Auth::user()?->currentEmployee();
+        $this->tenant   = $this->employee?->tenant;
+        $this->loadData();
+    }
 
+    /**
+     * Manual refresh button — shows a toast.
+     */
+    public function refreshManually(): void
+    {
+        $this->refresh();
         $this->dispatch('notify', type: 'success', message: 'Dashboard refreshed.');
     }
 };

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Auth;
@@ -22,15 +23,8 @@ new #[Layout('layouts.employee')] #[Title('My Appointments · Employee')] class 
 
     public int $perPage = 12;
 
-    public function updatingSearch(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatingStatusFilter(): void
-    {
-        $this->resetPage();
-    }
+    public function updatingSearch(): void       { $this->resetPage(); }
+    public function updatingStatusFilter(): void { $this->resetPage(); }
 
     #[Computed]
     public function employee(): ?Employee
@@ -64,11 +58,17 @@ new #[Layout('layouts.employee')] #[Title('My Appointments · Employee')] class 
 
         return [
             'upcoming' => (clone $base)
-                ->whereIn('status', ['scheduled', 'confirmed'])
+                ->whereIn('status', [
+                    AppointmentStatus::Scheduled->value,
+                    AppointmentStatus::Assigned->value,
+                    AppointmentStatus::Accepted->value,
+                    AppointmentStatus::Confirmed->value,
+                    AppointmentStatus::InProgress->value,
+                ])
                 ->count(),
 
             'completed' => (clone $base)
-                ->where('status', 'completed')
+                ->where('status', AppointmentStatus::Completed->value)
                 ->count(),
 
             'all' => (clone $base)->count(),
@@ -91,8 +91,16 @@ new #[Layout('layouts.employee')] #[Title('My Appointments · Employee')] class 
                 'customer:id,name,phone',
                 'service:id,name,duration_minutes',
             ])
-            ->when($this->statusFilter === 'upcoming', fn ($q) => $q->whereIn('status', ['scheduled', 'confirmed']))
-            ->when($this->statusFilter === 'completed', fn ($q) => $q->where('status', 'completed'))
+            ->when($this->statusFilter === 'upcoming', fn ($q) => $q->whereIn('status', [
+                AppointmentStatus::Scheduled->value,
+                AppointmentStatus::Assigned->value,
+                AppointmentStatus::Accepted->value,
+                AppointmentStatus::Confirmed->value,
+                AppointmentStatus::InProgress->value,
+            ]))
+            ->when($this->statusFilter === 'completed', fn ($q) => $q->where(
+                'status', AppointmentStatus::Completed->value
+            ))
             ->when($this->search !== '', function ($q) {
                 $term = '%' . $this->search . '%';
                 $q->where(function ($sub) use ($term) {
@@ -100,8 +108,11 @@ new #[Layout('layouts.employee')] #[Title('My Appointments · Employee')] class 
                         ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', $term));
                 });
             })
-            ->orderByRaw("CASE WHEN status IN ('confirmed','scheduled') THEN 0 ELSE 1 END")
-            ->orderByDesc('start_time')
+            ->orderByRaw("CASE
+                WHEN status IN ('in_progress', 'accepted', 'assigned', 'confirmed', 'scheduled') THEN 0
+                ELSE 1
+            END")
+            ->orderBy('start_time')
             ->paginate($this->perPage);
     }
 
