@@ -93,6 +93,8 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->group(function () {
     Route::livewire('/categories', 'pages::shop_owner.category-management')->name('owner.categories');
     Route::livewire('/inventory', 'pages::shop_owner.inventory-management')->name('owner.inventory');
 
+    Route::livewire('/sales', 'pages::shop_owner.sales')->name('owner.sales');
+
     Route::livewire('/services/create', 'pages::shop_owner.create-service-post')->name('owner.service_create');
     Route::livewire('/services', 'pages::shop_owner.service-post-table')->name('owner.services');
     Route::livewire('/services/{service}/edit', 'pages::shop_owner.update-service-post')->name('owner.service_edit');

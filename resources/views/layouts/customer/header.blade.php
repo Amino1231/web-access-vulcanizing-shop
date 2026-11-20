@@ -108,8 +108,8 @@
                                  class="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl py-1.5 z-50">
 
                                 <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-                                    <p class="text-xs font-medium text-slate-500 dark:text-gray-400">Signed in as</p>
-                                    <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">{{ auth()->user()->email }}</p>
+                                    <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">{{ auth()->user()->name }}</p>
+                                    <p class="mt-0.5 truncate text-sm  text-slate-900 dark:text-white">{{ auth()->user()->email }}</p>
                                 </div>
 
                                 <a href="{{ route('customer.profile') }}"
@@ -117,7 +117,7 @@
                                     <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                     </svg>
-                                    My profile
+                                    My Profile
                                 </a>
 
                                 <a href="{{ route('customer.orders') }}"
@@ -125,7 +125,7 @@
                                     <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                                     </svg>
-                                    My orders
+                                    My Orders
                                 </a>
 
                                 <a href="{{ route('customer.appointments') }}"
@@ -133,26 +133,8 @@
                                     <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    My appointments
+                                    My Bookings
                                 </a>
-
-                                @php
-                                    $user = auth()->user();
-                                    $dashboardRoute = $user->hasRole('admin')
-                                        ? 'admin.dashboard'
-                                        : ($user->hasRole('owner')
-                                            ? 'owner.dashboard'
-                                            : 'customer.dashboard');
-                                @endphp
-                                @if (\Illuminate\Support\Facades\Route::has($dashboardRoute))
-                                    <a href="{{ route($dashboardRoute) }}"
-                                       class="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-800">
-                                        <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                        </svg>
-                                        Dashboard
-                                    </a>
-                                @endif
 
                                 <div class="border-t border-slate-100 dark:border-gray-800 mt-1.5 pt-1.5">
                                     <form method="POST" action="{{ route('logout') }}">

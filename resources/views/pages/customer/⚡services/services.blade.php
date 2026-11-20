@@ -194,13 +194,17 @@
                             </div>
 
                             @php
-                                $post = \App\Models\Post::where('service_id', $service->id)
-                                    ->where('status', 'published')
-                                    ->whereNull('archived_at')
-                                    ->first();
+                                // Because of the whereHas in the query, if the service is here, it HAS a post.
+                                $post = $service->post; 
                             @endphp
 
-                            @if ($post)
+                            @if (!$service->is_active)
+                                <!-- Service is turned off by the owner -->
+                                <span class="rounded-xl bg-red-50 border border-red-200 px-3.5 py-2 text-xs font-bold text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">
+                                    Not Available
+                                </span>
+                            @elseif ($post)
+                                <!-- Service is active and has a published post -->
                                 <a href="{{ route('customer.services.book', $post->id) }}" 
                                    class="inline-flex items-center gap-1.5 rounded-xl bg-[#FF5E14] px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-orange-500/30 transition hover:bg-[#D94E10]">
                                     Book
@@ -209,6 +213,7 @@
                                     </svg>
                                 </a>
                             @else
+                                <!-- Fallback (should not trigger if query is correct) -->
                                 <span class="rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-500 dark:bg-gray-800 dark:text-gray-400">
                                     Not bookable
                                 </span>

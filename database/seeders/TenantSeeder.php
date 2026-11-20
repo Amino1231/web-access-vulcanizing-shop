@@ -29,7 +29,7 @@ class TenantSeeder extends Seeder
             ],
             [
                 'owner_email'     => 'owner2@gmail.com',
-                'name'            => 'Cebu Tire Pros',
+                'name'            => 'Edmar & Associates Vulcanizing',
                 'phone'           => '09170000003',
                 'email'           => 'shop@cebutirepros.com',
                 'address'         => 'Yulo Street, Barangay XIII, Victorias City, Negros Occidental, Negros Island Region, 6119, Philippines',
@@ -43,7 +43,7 @@ class TenantSeeder extends Seeder
             ],
             [
                 'owner_email'     => 'owner3@gmail.com',
-                'name'            => 'Davao Wheel Works',
+                'name'            => 'Magsaysay Wheel Works',
                 'phone'           => '09170000004',
                 'email'           => 'shop@davaowheelworks.com',
                 'address'         => 'Gatuslao Street, Barangay VI, Victorias City, Negros Occidental, Negros Island Region, 6119, Philippines',
@@ -57,7 +57,7 @@ class TenantSeeder extends Seeder
             ],
             [
                 'owner_email'     => 'owner@gmail.com',
-                'name'            => 'Manila Tire Hub',
+                'name'            => 'I\'m Tire Hub',
                 'phone'           => '09170000005',
                 'email'           => 'shop@manilatirehub.com',
                 'address'         => 'Don Miguel Ossorio Street, Barangay I, Victorias City, Negros Occidental, Negros Island Region, 6119, Philippines',
@@ -71,7 +71,7 @@ class TenantSeeder extends Seeder
             ],
             [
                 'owner_email'     => 'owner@gmail.com',
-                'name'            => 'QC Wheel Repair',
+                'name'            => 'Manolette Wheel Repair',
                 'phone'           => '09170000006',
                 'email'           => 'shop@qcwheel.com',
                 'address'         => 'Victorias–Negros Road, Barangay XIX, Victorias City, Negros Occidental, Negros Island Region, 6119, Philippines',
@@ -85,7 +85,7 @@ class TenantSeeder extends Seeder
             ],
             [
                 'owner_email'     => 'owner@gmail.com',
-                'name'            => 'Bulacan Auto Shop',
+                'name'            => 'Bulkitan ni Paulzkie',
                 'phone'           => '09170000007',
                 'email'           => 'shop@bulacanauto.com',
                 'address'         => 'Magsaysay Street, Barangay XXI, Victorias City, Negros Occidental, Negros Island Region, 6119, Philippines',

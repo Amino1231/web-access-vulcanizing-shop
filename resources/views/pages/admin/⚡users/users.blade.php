@@ -6,7 +6,7 @@
             <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Platform management</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Users</h1>
             <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
-                Every account on the platform — owners, customers, and their activity.
+                Every account on the platform — owners, customers, employees, and their activity.
             </p>
         </div>
     </div>
@@ -31,6 +31,7 @@
             ['key' => '',         'label' => 'All',       'count' => $counts['all']],
             ['key' => 'owner',    'label' => 'Owners',    'count' => $counts['owners']],
             ['key' => 'customer', 'label' => 'Customers', 'count' => $counts['customers']],
+            ['key' => 'employee', 'label' => 'Employees', 'count' => $counts['employees']],
             ['key' => 'inactive', 'label' => 'Inactive',  'count' => $counts['inactive']],
         ];
         @endphp
@@ -80,6 +81,7 @@
                 $roles = $user->getRoleNames();
                 $isOwner = $roles->contains('owner');
                 $isCustomer = $roles->contains('customer');
+                $isEmployee = $roles->contains('employee');
             @endphp
             <div wire:key="m-user-{{ $user->id }}"
                  class="rounded-2xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
@@ -96,6 +98,9 @@
                             @endif
                             @if ($isCustomer)
                                 <span class="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">Customer</span>
+                            @endif
+                            @if ($isEmployee)
+                                <span class="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700 dark:bg-green-500/10 dark:text-green-300">Employee</span>
                             @endif
                             @if (! $user->is_active)
                                 <span class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-700 dark:bg-red-500/10 dark:text-red-300">Inactive</span>
@@ -156,6 +161,7 @@
                             $roles = $user->getRoleNames();
                             $isOwner = $roles->contains('owner');
                             $isCustomer = $roles->contains('customer');
+                            $isEmployee = $roles->contains('employee');
                         @endphp
                         <tr wire:key="user-{{ $user->id }}" class="transition hover:bg-slate-50 dark:hover:bg-gray-800/40">
                             <td class="px-4 py-3">
@@ -180,8 +186,8 @@
                                     @if ($isCustomer)
                                         <span class="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">Customer</span>
                                     @endif
-                                    @if (! $isOwner && ! $isCustomer)
-                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:bg-gray-800 dark:text-gray-300">User</span>
+                                    @if ($isEmployee)
+                                        <span class="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700 dark:bg-green-500/10 dark:text-green-300">Employee</span>
                                     @endif
                                 </div>
                             </td>
@@ -472,6 +478,30 @@
                                     </div>
                                     <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ $shop['is_active'] ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
                                         {{ $shop['is_active'] ? 'Live' : 'Offline' }}
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Associated Shops (employees/tenant users) --}}
+                @if (! empty($u['shared_shops']))
+                    <div>
+                        <h3 class="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                            Associated Shops ({{ count($u['shared_shops']) }})
+                        </h3>
+                        <div class="space-y-2">
+                            @foreach ($u['shared_shops'] as $shop)
+                                <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800/40 p-3">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white dark:bg-gray-700">
+                                        {{ strtoupper(substr($shop['name'], 0, 2)) }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ $shop['name'] }}</p>
+                                    </div>
+                                    <span class="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                                        Staff
                                     </span>
                                 </div>
                             @endforeach

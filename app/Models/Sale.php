@@ -11,6 +11,7 @@ class Sale extends Model
     protected $fillable = [
         'tenant_id',
         'customer_id',
+        'customer_name',
         'appointment_id',
         'roadside_request_id',
         'served_by',

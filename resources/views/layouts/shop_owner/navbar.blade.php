@@ -25,6 +25,7 @@
             'label' => 'Operations',
             'items' => [
                 ['label' => 'Orders',            'route' => 'owner.order_management', 'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M7 12h10M8 17h8M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>'],
+                ['label' => 'Sales',             'route' => 'owner.sales',            'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>'],
                 ['label' => 'Appointments',      'route' => 'owner.appointments',     'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 2v3M16 2v3M3.5 8.5h17M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" /><path stroke-linecap="round" stroke-linejoin="round" d="M9 13l2 2 4-4" /></svg>'],
                 ['label' => 'Roadside requests', 'route' => 'owner.roadside',         'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2a7 7 0 00-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 00-7-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 10.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>'],
                 ['label' => 'Employees',         'route' => 'owner.employees',        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>'],
@@ -127,7 +128,7 @@
                     @endforelse
 
                     <div class="mt-1.5 border-t border-slate-100 pt-1.5 dark:border-gray-800">
-                        <a href="{{ route('owner.business_create') }}" wire:navigate
+                        <a href="{{ route('owner.business_create') }}"
                            class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#FF5E14] transition hover:bg-orange-50 dark:hover:bg-orange-500/10">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
@@ -151,7 +152,7 @@
                         @foreach ($group['items'] as $item)
                             @php $isActive = request()->routeIs($item['route']); @endphp
 
-                            <a href="{{ route($item['route']) }}" wire:navigate
+                            <a href="{{ route($item['route']) }}"
                                class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
                                    {{ $isActive
                                        ? 'bg-slate-100 text-slate-900 dark:bg-gray-800 dark:text-white'

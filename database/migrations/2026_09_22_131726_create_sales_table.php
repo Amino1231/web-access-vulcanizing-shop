@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('customer_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('customer_name')->nullable(); // For manual sales where customer is not registered
             $table->foreignId('appointment_id')->nullable()->constrained('appointments')->nullOnDelete();
             $table->foreignId('roadside_request_id')->nullable()->constrained('road_side_requests')->nullOnDelete();
             $table->foreignId('served_by')->nullable()->constrained('employees')->nullOnDelete();

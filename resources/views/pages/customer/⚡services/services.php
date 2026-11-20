@@ -32,8 +32,12 @@ new #[Layout('layouts.customer')] class extends Component
     public function services()
     {
         return Service::query()
-            ->where('is_active', true)
-            ->with(['category:id,name', 'tenant:id,name,is_active,business_hours,business_setup_completed'])
+            // Eager load the published post to avoid N+1 queries in the view
+            ->with([
+                'category:id,name', 
+                'tenant:id,name,is_active,business_hours,business_setup_completed',
+                'post' => fn($q) => $q->where('status', 'published')->whereNull('archived_at')
+            ])
             ->when($this->search !== '', function ($q) {
                 $term = '%' . $this->search . '%';
                 $q->where(function ($sub) use ($term) {
@@ -42,6 +46,8 @@ new #[Layout('layouts.customer')] class extends Component
                 });
             })
             ->when($this->tenantFilter !== '', fn ($q) => $q->where('tenant_id', $this->tenantFilter))
+            // ONLY show services that have a published, non-archived post
+            ->whereHas('post', fn($q) => $q->where('status', 'published')->whereNull('archived_at'))
             ->orderBy('name')
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')

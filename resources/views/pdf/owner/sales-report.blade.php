@@ -12,7 +12,7 @@
             padding: 24px;
         }
         h1 { font-size: 20px; margin-bottom: 2px; color: #0f172a; }
-        h2 { font-size: 13px; margin: 18px 0 8px; color: #0f172a; }
+        h2 { font-size: 13px; margin: 18px 0 8px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
         .muted { color: #64748b; }
         .header { border-bottom: 2px solid #FF5E14; padding-bottom: 12px; margin-bottom: 16px; }
         .header .shop { color: #FF5E14; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
@@ -30,15 +30,17 @@
         .kpi-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
         .kpi-value { font-size: 14px; font-weight: bold; color: #0f172a; }
 
+        /* Table Styles */
         table.data {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
+            table-layout: fixed; /* Forces columns to respect widths */
         }
         table.data th {
             background: #f1f5f9;
             text-align: left;
-            padding: 6px 8px;
+            padding: 8px;
             font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.4px;
@@ -46,22 +48,39 @@
             border-bottom: 1px solid #cbd5e1;
         }
         table.data td {
-            padding: 6px 8px;
+            padding: 8px;
             border-bottom: 1px solid #e2e8f0;
             vertical-align: top;
+            word-wrap: break-word; /* Prevents long emails from stretching the table */
         }
         table.data tr:nth-child(even) td { background: #fafafa; }
+        
+        /* FIXED ALIGNMENT CLASSES */
         .right { text-align: right; }
+        table.data th.right, 
+        table.data td.right { 
+            text-align: right !important; 
+            padding-left: 15px; /* Adds a gap so numbers don't touch the previous column */
+        }
+
         .bold { font-weight: bold; }
         .money { color: #059669; font-weight: bold; }
-        .empty { padding: 14px; text-align: center; color: #94a3b8; background: #f8fafc; border: 1px dashed #cbd5e1; }
+        .empty { padding: 14px; text-align: center; color: #94a3b8; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; }
+        
         .footer {
-            margin-top: 24px;
+            margin-top: 30px;
             padding-top: 10px;
             border-top: 1px solid #e2e8f0;
             font-size: 8px;
             color: #94a3b8;
             text-align: center;
+        }
+        .summary-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -69,7 +88,7 @@
 
     <div class="header">
         <div class="shop">{{ $tenant->name }}</div>
-        <h1>Sales Report</h1>
+        <h1>Executive Sales Report</h1>
         <div class="meta">
             <strong>{{ $label }}</strong>
             &nbsp;·&nbsp;
@@ -83,12 +102,12 @@
     <table class="kpi-table">
         <tr>
             <td>
-                <div class="kpi-label">Revenue</div>
+                <div class="kpi-label">Gross Revenue</div>
                 <div class="kpi-value">₱{{ number_format($kpis['revenue'], 2) }}</div>
             </td>
             <td>
-                <div class="kpi-label">Sales Count</div>
-                <div class="kpi-value">{{ $kpis['sales'] }}</div>
+                <div class="kpi-label">Net Payout</div>
+                <div class="kpi-value" style="color: #059669;">₱{{ number_format($kpis['net'], 2) }}</div>
             </td>
             <td>
                 <div class="kpi-label">Avg Order Value</div>
@@ -102,18 +121,18 @@
     </table>
 
     {{-- Top products --}}
-    <h2>Top Products</h2>
+    <h2>Top Selling Products</h2>
     @if (empty($topProducts))
-        <div class="empty">No sales in this period.</div>
+        <div class="empty">No product sales in this period.</div>
     @else
         <table class="data">
             <thead>
                 <tr>
                     <th style="width: 40px;">#</th>
-                    <th>Product</th>
-                    <th style="width: 90px;">SKU</th>
-                    <th class="right" style="width: 70px;">Qty</th>
-                    <th class="right" style="width: 110px;">Revenue</th>
+                    <th>Product Name</th>
+                    <th style="width: 150px;">SKU</th>
+                    <th class="right" style="width: 80px;">Qty Sold</th>
+                    <th class="right" style="width: 120px;">Revenue</th>
                 </tr>
             </thead>
             <tbody>
@@ -139,10 +158,10 @@
             <thead>
                 <tr>
                     <th style="width: 40px;">#</th>
-                    <th>Customer</th>
-                    <th>Email</th>
+                    <th>Customer Name</th>
+                    <th style="width: 180px;">Email</th>
                     <th class="right" style="width: 70px;">Orders</th>
-                    <th class="right" style="width: 110px;">Spent</th>
+                    <th class="right" style="width: 120px;">Total Spent</th>
                 </tr>
             </thead>
             <tbody>
@@ -161,15 +180,15 @@
 
     {{-- Sales by employee --}}
     @if (! empty($salesByEmployee))
-        <h2>Sales by Employee</h2>
+        <h2>Employee Performance</h2>
         <table class="data">
             <thead>
                 <tr>
-                    <th>Employee</th>
-                    <th class="right" style="width: 80px;">Commission</th>
-                    <th class="right" style="width: 70px;">Orders</th>
-                    <th class="right" style="width: 110px;">Revenue</th>
-                    <th class="right" style="width: 110px;">Payout</th>
+                    <th>Employee Name</th>
+                    <th class="right" style="width: 90px;">Comm. Rate</th>
+                    <th class="right" style="width: 80px;">Orders</th>
+                    <th class="right" style="width: 120px;">Revenue</th>
+                    <th class="right" style="width: 120px;">Est. Payout</th>
                 </tr>
             </thead>
             <tbody>
@@ -186,59 +205,20 @@
         </table>
     @endif
 
-    {{-- Full sales table --}}
-    <h2>All Sales</h2>
-    @if ($sales->isEmpty())
-        <div class="empty">No sales in this period.</div>
-    @else
-        <table class="data">
-            <thead>
-                <tr>
-                    <th style="width: 100px;">Invoice</th>
-                    <th>Customer</th>
-                    <th style="width: 140px;">Items</th>
-                    <th style="width: 70px;">Payment</th>
-                    <th class="right" style="width: 100px;">Total</th>
-                    <th class="right" style="width: 100px;">When</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($sales as $sale)
-                    <tr>
-                        <td>
-                            <div class="bold">{{ $sale->invoice_number }}</div>
-                            @if ($sale->server)
-                                <div class="muted" style="font-size: 8px;">by {{ $sale->server->name }}</div>
-                            @endif
-                        </td>
-                        <td>
-                            @if ($sale->customer)
-                                <div class="bold">{{ $sale->customer->name }}</div>
-                                <div class="muted" style="font-size: 8px;">{{ $sale->customer->email }}</div>
-                            @else
-                                <span class="muted">Walk-in</span>
-                            @endif
-                        </td>
-                        <td>
-                            <div>{{ $sale->items->count() }} {{ \Illuminate\Support\Str::plural('line', $sale->items->count()) }}</div>
-                            <div class="muted" style="font-size: 8px;">
-                                {{ $sale->items->take(2)->map(fn ($i) => $i->product?->name ?? $i->service?->name ?? 'Item')->filter()->implode(', ') }}
-                                @if ($sale->items->count() > 2)
-                                    +{{ $sale->items->count() - 2 }}
-                                @endif
-                            </div>
-                        </td>
-                        <td>{{ ucwords(str_replace('_', ' ', $sale->payment_method)) }}</td>
-                        <td class="right bold">₱{{ number_format($sale->final_amount, 2) }}</td>
-                        <td class="right muted">{{ $sale->created_at->format('M d, g:i A') }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    @endif
+    {{-- Summary block --}}
+    <div class="summary-box">
+        <h2 style="margin-top: 0; border: none; padding-bottom: 0;">Report Summary</h2>
+        <p class="muted" style="margin-top: 5px;">
+            This report summarizes the performance of <strong>{{ $tenant->name }}</strong> for the selected period.
+            A total of <strong>{{ $kpis['sales'] }} transactions</strong> were completed, generating 
+            <strong>₱{{ number_format($kpis['revenue'], 2) }}</strong> in gross revenue and 
+            <strong>₱{{ number_format($kpis['net'], 2) }}</strong> in net payouts. 
+            Detailed transaction logs are available in the web dashboard.
+        </p>
+    </div>
 
     <div class="footer">
-        {{ $tenant->name }} · Sales report generated on {{ now()->format('F j, Y \a\t g:i A') }}
+        {{ $tenant->name }} · Confidential Executive Sales Report · Generated on {{ now()->format('F j, Y \a\t g:i A') }}
     </div>
 
 </body>

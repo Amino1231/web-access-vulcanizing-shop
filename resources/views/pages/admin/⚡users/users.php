@@ -21,20 +21,17 @@ new #[Layout('layouts.admin')] class extends Component
     public string $search = '';
 
     #[Url(history: true)]
-    public string $roleFilter = '';    // '' | owner | customer | inactive
+    public string $roleFilter = '';    // '' | owner | customer | employee | inactive
 
     public int $perPage = 15;
 
     // Detail modal
     public ?int $viewingUserId = null;
-
     public ?array $viewingUser = null;
 
     // Confirmation modal
     public ?int $confirmingUserId = null;
-
     public ?string $confirmingAction = null;
-
     public ?string $confirmingName = null;
 
     public function updatingSearch(): void
@@ -50,11 +47,15 @@ new #[Layout('layouts.admin')] class extends Component
     #[Computed]
     public function counts(): array
     {
+        // Base query that excludes admins
+        $baseQuery = User::whereDoesntHave('roles', fn ($q) => $q->where('name', 'admin'));
+
         return [
-            'all' => User::count(),
-            'owners' => User::role('owner')->count(),
-            'customers' => User::role('customer')->count(),
-            'inactive' => User::where('is_active', false)->count(),
+            'all' => (clone $baseQuery)->count(),
+            'owners' => (clone $baseQuery)->role('owner')->count(),
+            'customers' => (clone $baseQuery)->role('customer')->count(),
+            'employees' => (clone $baseQuery)->role('employee')->count(),
+            'inactive' => (clone $baseQuery)->where('is_active', false)->count(),
         ];
     }
 
@@ -62,6 +63,8 @@ new #[Layout('layouts.admin')] class extends Component
     public function users()
     {
         return User::query()
+            // Exclude Admins
+            ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'admin'))
             ->withCount(['ownedTenants', 'orders'])
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
@@ -73,6 +76,7 @@ new #[Layout('layouts.admin')] class extends Component
             })
             ->when($this->roleFilter === 'owner', fn ($q) => $q->role('owner'))
             ->when($this->roleFilter === 'customer', fn ($q) => $q->role('customer'))
+            ->when($this->roleFilter === 'employee', fn ($q) => $q->role('employee'))
             ->when($this->roleFilter === 'inactive', fn ($q) => $q->where('is_active', false))
             ->latest()
             ->paginate($this->perPage);
@@ -140,6 +144,7 @@ new #[Layout('layouts.admin')] class extends Component
             'roles' => $roles,
             'is_owner' => in_array('owner', $roles, true),
             'is_customer' => in_array('customer', $roles, true),
+            'is_employee' => in_array('employee', $roles, true),
             'shops' => $user->ownedTenants->map(fn ($t) => [
                 'id' => $t->id,
                 'name' => $t->name,
@@ -209,7 +214,6 @@ new #[Layout('layouts.admin')] class extends Component
         $user = User::find($this->confirmingUserId);
         if (! $user) {
             $this->cancelAction();
-
             return;
         }
 
@@ -218,14 +222,12 @@ new #[Layout('layouts.admin')] class extends Component
             if ($user->id === Auth::id()) {
                 session()->flash('error', 'You cannot delete your own account.');
                 $this->cancelAction();
-
                 return;
             }
 
             if ($user->hasRole('admin')) {
                 session()->flash('error', 'You cannot delete another admin.');
                 $this->cancelAction();
-
                 return;
             }
 
@@ -233,7 +235,6 @@ new #[Layout('layouts.admin')] class extends Component
             if ($user->ownedTenants()->exists()) {
                 session()->flash('error', 'This user owns shops. Deactivate their account instead.');
                 $this->cancelAction();
-
                 return;
             }
 
@@ -243,13 +244,10 @@ new #[Layout('layouts.admin')] class extends Component
             DB::transaction(function () use ($user) {
                 // Kill active sessions
                 DB::table('sessions')->where('user_id', $user->id)->delete();
-
                 // Detach roles (spatie pivot)
                 $user->syncRoles([]);
-
                 // Remove from tenant_user pivot if any
                 DB::table('tenant_users')->where('user_id', $user->id)->delete();
-
                 // Now safe to hard-delete
                 $user->delete();
             });
@@ -274,7 +272,6 @@ new #[Layout('layouts.admin')] class extends Component
             $msg = "{$user->name} deactivated.";
         } else {
             $this->cancelAction();
-
             return;
         }
 
